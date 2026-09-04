@@ -22,6 +22,19 @@ const LAYERS = [
 export function CompositionBar({ data }: { data: Composition }) {
   const total = data.productive + data.neutral + data.unproductive
 
+  // Blank state: nothing logged in the range → an empty track and a plain
+  // "no data" line. Never a full-red bar implying a wasted day.
+  if (total === 0) {
+    return (
+      <div>
+        <div className="h-3 w-full rounded-full bg-muted/50 border border-dashed border-border/60" />
+        <p className="text-xs text-muted-foreground/70 mt-2">
+          Nothing logged in this range yet — this fills in as you log. Unlogged days are not counted against you.
+        </p>
+      </div>
+    )
+  }
+
   return (
     <div>
       <div className="h-3 w-full rounded-full bg-muted overflow-hidden flex">

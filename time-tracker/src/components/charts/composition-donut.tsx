@@ -44,6 +44,8 @@ export function CompositionDonut({
 
   const total = slices.reduce((a, d) => a + d.minutes, 0)
 
+  const focused = hover !== null && total > 0 ? slices[hover] : null
+
   // Insert transparent spacers at kind boundaries → visible gaps between the
   // positive / neutral / negative groups (distortion < 1°, value-level only).
   const pieData: PieItem[] = []
@@ -54,7 +56,6 @@ export function CompositionDonut({
     pieData.push({ ...s, sliceIndex: i } as PieItem & { sliceIndex: number })
   })
 
-  const focused = hover !== null ? slices[hover] : null
   const focusedShare = focused && total > 0 ? Math.round((focused.minutes / total) * 100) : null
 
   // Group legend rows by kind, preserving slice order.
@@ -64,6 +65,29 @@ export function CompositionDonut({
     if (last && last.kind === slice.kind) last.rows.push({ slice, index })
     else legendGroups.push({ kind: slice.kind, rows: [{ slice, index }] })
   })
+
+  // Blank state: no logged days in range → an empty dashed ring, never a
+  // fake "everything is unproductive" donut.
+  if (total === 0) {
+    return (
+      <div className={cn('flex flex-col md:flex-row items-center gap-4 min-w-0', className)}>
+        <div className="relative w-full md:w-[46%] shrink-0 flex items-center justify-center" style={{ height }}>
+          <div className="rounded-full border-2 border-dashed border-border/70" style={{ width: '68%', height: '76%' }} />
+          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+            <span className="text-[11px] text-muted-foreground/70 text-center leading-tight max-w-[120px]">
+              no data yet
+            </span>
+          </div>
+        </div>
+        <div className="w-full md:flex-1 min-w-0">
+          <p className="text-xs text-muted-foreground/70 leading-relaxed">
+            Nothing logged here yet — the chart fills in as you log. Unlogged days stay blank; they are never
+            counted against you.
+          </p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className={cn('flex flex-col md:flex-row items-center gap-4 min-w-0', className)}>

@@ -29,11 +29,26 @@ interface HoursBarChartProps {
 }
 
 export function HoursBarChart({ data, height = 240, color, stacked = true }: HoursBarChartProps) {
+  // Only logged time renders. Buckets with nothing logged are not "zero"
+  // bars — they don't exist. The chart fills up as more days get logged.
+  const visible = data.filter((d) => d.hasEntries)
+
+  if (visible.length === 0) {
+    return (
+      <div
+        className="flex items-center justify-center text-xs text-muted-foreground/70"
+        style={{ height }}
+      >
+        Nothing logged in this range yet — bars appear as you log days.
+      </div>
+    )
+  }
+
   if (!stacked) {
     return (
       <div style={{ width: '100%', height }} className="text-muted-foreground">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} margin={{ top: 8, right: 4, bottom: 0, left: 0 }} barCategoryGap="25%">
+          <BarChart data={visible} margin={{ top: 8, right: 4, bottom: 0, left: 0 }} barCategoryGap="25%">
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" opacity={0.12} />
             <XAxis dataKey="label" tickLine={false} axisLine={false} minTickGap={18} tick={axisTick} />
             <YAxis
@@ -88,7 +103,7 @@ export function HoursBarChart({ data, height = 240, color, stacked = true }: Hou
       </div>
       <div style={{ height }}>
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} margin={{ top: 8, right: 4, bottom: 0, left: 0 }} barCategoryGap="25%">
+          <BarChart data={visible} margin={{ top: 8, right: 4, bottom: 0, left: 0 }} barCategoryGap="25%">
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" opacity={0.12} />
             <XAxis dataKey="label" tickLine={false} axisLine={false} minTickGap={18} tick={axisTick} />
             <YAxis

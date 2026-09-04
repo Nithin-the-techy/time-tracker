@@ -4,7 +4,9 @@
 //
 // The hero row carries TWO equally big, window-independent numbers:
 //   Left   — GPP: every productive minute ever logged, averaged per tracked
-//            day, extended to a month, valued at $20/h. Computed from ALL
+//            day, extended to a month, valued at GPP_DOLLARS_PER_HOUR.
+//            Calibrated so $1T/month = 14 productive hours every day — the
+//            physical ceiling of a top-performing human. Computed from ALL
 //            data, so it reads the same in Day+Week, Month and Year.
 //   Right  — productive hours across the last 30 days (span clamped to when
 //            tracking started), with hours/day and the real date span.
@@ -67,7 +69,7 @@ import { useUIStore, type ProgressMode } from '@/store/ui-store'
 const WINDOW_DAYS: Record<ProgressMode, number> = { dayweek: 7, month: 30, year: 365 }
 
 const GPP_TOOLTIP =
-  'GPP — Gross Personal Product, computed like nominal GDP: all productive time ever logged, averaged over every day tracked so far, extended to a month, valued at $20 per productive hour. One formula, one input (all your data) — the same number in every view. Log more, show up daily, and it rises.'
+  'GPP — Gross Personal Product, computed like nominal GDP: all productive time ever logged, averaged over every day tracked so far, extended to a month. The scale: $1T a month is 14 productive hours every single day — the physical ceiling of a top-performing human (7h sleep, 1.5h recovery, under 2h wasted). Your number is your honest fraction of that. One formula, one input (all your data) — the same number in every view.'
 
 export function ProgressScreen() {
   const now = new Date()
@@ -181,7 +183,7 @@ export function ProgressScreen() {
             month · {formatHours(g.avgPerDayMinutes)}/day across {g.daysTracked} tracked {g.daysTracked === 1 ? 'day' : 'days'}
           </p>
           <p className="text-xs text-muted-foreground/70 mt-0.5">
-            on pace for {formatMoney(g.annualDollars)} a year · {formatGoalPercent(g.goalPercent)} of the $1T goal
+            {formatGoalPercent(g.goalPercent)} of the $1T/month goal · on pace for {formatMoney(g.annualDollars)} a year
           </p>
         </div>
 
@@ -223,7 +225,7 @@ export function ProgressScreen() {
                 <CompositionDonut
                   slices={todaySlices}
                   height={200}
-                  centerPrimary={todayM.productivePercent !== null ? formatPercent(todayM.productivePercent) : '0%'}
+                  centerPrimary={todayM.productivePercent !== null ? formatPercent(todayM.productivePercent) : '—'}
                   centerSecondary="of open time"
                 />
                 {proj ? (
@@ -238,7 +240,7 @@ export function ProgressScreen() {
                   <p className="text-[11px] text-muted-foreground mt-2">
                     {todayM.productive > 0
                       ? `${formatPercent(todayM.productivePercent)} of open time so far`
-                      : 'full-day frame shown — log to fill it in'}
+                      : 'nothing logged yet — the day fills in only as you log'}
                   </p>
                 )}
               </CardContent>
@@ -297,11 +299,7 @@ export function ProgressScreen() {
                 <p className="text-sm font-medium">{hoursTitle}</p>
                 <p className="text-[11px] text-muted-foreground">{windowName}</p>
               </div>
-              {totals.productive === 0 && totals.unproductive === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-12">Nothing logged in this window yet.</p>
-              ) : (
-                <HoursBarChart data={chartData} height={235} />
-              )}
+              <HoursBarChart data={chartData} height={235} />
             </CardContent>
           </Card>
         </div>
@@ -310,8 +308,8 @@ export function ProgressScreen() {
       {/* Standings — monthly GPP, same treatment for everyone */}
       <section>
         <p className="text-sm text-muted-foreground mb-3">
-          Standings · monthly GPP at ${GPP_DOLLARS_PER_HOUR} per productive hour
-          <span className="text-muted-foreground/70"> · hours alongside · rivals from weekly estimates</span>
+          Standings · monthly GPP at {formatMoney(GPP_DOLLARS_PER_HOUR)} per productive hour
+          <span className="text-muted-foreground/70"> · $1T = 14h/day, every day · rivals from weekly estimates</span>
         </p>
         <Card>
           <CardContent className="p-4">

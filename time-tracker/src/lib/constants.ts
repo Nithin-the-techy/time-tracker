@@ -142,17 +142,23 @@ export const UNACCOUNTED_COLOR = '#7f2d2d'
 // Neutral slice label for the assumed baseline on days without neutral logs.
 export const NEUTRAL_DEFAULT_LABEL = 'Meals & recovery'
 
-// Combined eat + bathe baseline (minutes/day). Used on days with no logged
-// neutral time. Per-day values can be pinned in Settings.
+// Legacy form-prefill suggestions only. Metrics NEVER assume these — a day
+// with no logs has no sleep and no neutral time until it is actually logged
+// (or pinned for that day in Settings).
 export const EAT_BATHE_DEFAULT_MINUTES = 90
-
-// Sleep default when no Sleep entry / logged sleep exists for the day.
 export const DEFAULT_SLEEP_MINUTES = 480
 
 // --- GPP (Gross Personal Product) ---
 // The big abstract number on Progress: all-time productive time averaged per
 // tracked day and extended to a month, valued at GPP_DOLLARS_PER_HOUR per
-// productive hour. Fictional currency for perspective — calibrated so
-// ~4.4h/day ≈ $2.6k/month (≈ $32k a year), with the $1T goal line far above.
-export const GPP_DOLLARS_PER_HOUR = 20
+// productive hour.
+//
+// Calibration — $1T/month = the output of a top-performing human at the
+// physical ceiling: 14 productive hours every single day, 30 days a month.
+// The other 10h: 7h sleep + 1.5h meals/recovery (neutral) + 1.5h wasted
+// (unproductive — under the 2h/day bar). That makes $1T hard but physically
+// possible, and every logged hour reads as a fraction of world-class:
+// 4h/day ≈ $286B/month ≈ 29% of the goal.
 export const GPP_GOAL_DOLLARS = 1_000_000_000_000
+export const GPP_TOP_PRODUCTIVE_HOURS_PER_DAY = 14
+export const GPP_DOLLARS_PER_HOUR = GPP_GOAL_DOLLARS / (GPP_TOP_PRODUCTIVE_HOURS_PER_DAY * 30)

@@ -2,14 +2,18 @@
 //
 // A day has three layers:
 //   Productive    — all department time except sleep
-//   Neutral       — sleep (logged via Sleep entries or neutral logs, else 8h)
-//                   + other neutral (logged meals/hygiene/chores..., else 90m)
+//   Neutral       — sleep (Health → Sleep entries + sleep neutral logs) plus
+//                   other neutral logs (meals/hygiene/chores...) or the
+//                   per-day pin from Settings
 //   Unproductive  — what's left: 1440 − Neutral − Productive. Negative logs
 //                   (gaming, scrolling...) just LABEL part of this remainder.
 //
-// Neutral parts can be overridden per day (DayAllowance, Settings). Logging
-// neutral time through the universal log replaces the day's assumption with
-// reality. Everything downstream reads the same numbers.
+// NOTHING is assumed. A day with no logs is not a bad day — it is no data:
+// zero sleep, zero neutral, zero unproductive, invisible to every chart.
+// Sleep is a log, not a constant. Ranges and buckets are built ONLY from
+// logged (active) days, so charts fill up as real data is added and future
+// dates never render as failure. Per-day pins in Settings count as data for
+// that day. Everything downstream reads the same numbers.
 //
 // GPP ($) = all-time productive minutes, averaged per tracked day, extended
 // to a month, valued at a fixed $/h — computed once, shown identically in
@@ -18,8 +22,6 @@
 
 import type { Entry, NeutralEntry, UnproductiveBlock } from './store'
 import {
-  EAT_BATHE_DEFAULT_MINUTES,
-  DEFAULT_SLEEP_MINUTES,
   GPP_DOLLARS_PER_HOUR,
   GPP_GOAL_DOLLARS,
   DEPARTMENT_COLORS,
@@ -62,11 +64,12 @@ export interface NegativeBlockLike extends Omit<UnproductiveBlock, 'createdAt'> 
 
 export interface DayMetrics {
   date: string // YYYY-MM-DD
+  active: boolean // has at least one log (entry, neutral log, or pinned day)
   productive: number
   neutral: number
-  sleepMinutes: number
-  mealsMinutes: number // eat/bathe or the per-day override
-  available: number // 1440 − sleep − meals
+  sleepMinutes: number // logged (or pinned) only — never assumed
+  mealsMinutes: number // logged (or pinned) only — never assumed
+  available: number // 1440 − sleep − meals (logged days only)
   gpp: number
   unproductive: number
   productivePercent: number | null // null if available ≤ 0
@@ -162,16 +165,33 @@ export function dayMetrics(
   const dayEntries = entries.filter((e) => entryDateKey(e) === dateKey)
   const override = allowances?.get(dateKey)
 
-  // Sleep: pin > logged (Sleep entries + sleep neutral logs) > 8h default.
+  // Sleep: pin > logged (Sleep entries + sleep neutral logs). No log, no
+  // number — sleep is data, never an assumption.
   const loggedSleep = loggedSleepMinutes(entries, neutralEntries, dateKey)
-  const sleepMinutes =
-    override?.sleepMinutes != null ? override.sleepMinutes : loggedSleep > 0 ? loggedSleep : DEFAULT_SLEEP_MINUTES
+  const sleepMinutes = override?.sleepMinutes != null ? override.sleepMinutes : loggedSleep
 
-  // Other neutral: pin > logged (meals, chores...) > 90m default. Logging
-  // replaces the assumption with what actually happened.
+  // Other neutral: pin > logged (meals, chores...). No default.
   const loggedOther = loggedOtherNeutralMinutes(neutralEntries, dateKey)
-  const mealsMinutes =
-    override?.neutralMinutes != null ? override.neutralMinutes : loggedOther > 0 ? loggedOther : EAT_BATHE_DEFAULT_MINUTES
+  const mealsMinutes = override?.neutralMinutes != null ? override.neutralMinutes : loggedOther
+
+  // A day exists to the app only if something was actually logged on it —
+  // any department entry, any neutral log, or a pinned sleep/neutral value.
+  const active = dayEntries.length > 0 || loggedSleep > 0 || loggedOther > 0 || override != null
+
+  if (!active) {
+    return {
+      date: dateKey,
+      active: false,
+      productive: 0,
+      neutral: 0,
+      sleepMinutes: 0,
+      mealsMinutes: 0,
+      available: 0,
+      gpp: 0,
+      unproductive: 0,
+      productivePercent: null,
+    }
+  }
 
   const neutral = sleepMinutes + mealsMinutes
   const available = Math.max(0, 1440 - neutral)
@@ -187,6 +207,7 @@ export function dayMetrics(
 
   return {
     date: dateKey,
+    active: true,
     productive,
     neutral,
     sleepMinutes,
@@ -221,17 +242,20 @@ export function rangeMetrics(
   let productive = 0
   let neutral = 0
   let sleepTotal = 0
+  let availableSum = 0
   let activeDays = 0
 
   for (const day of days) {
     const m = dayMetrics(entries, day, allowances, neutralEntries)
+    if (!m.active) continue // unlogged days are no data, not a bad day
     productive += m.productive
     neutral += m.neutral
     sleepTotal += m.sleepMinutes
-    if (m.productive > 0) activeDays += 1
+    availableSum += m.available
+    activeDays += 1
   }
 
-  const available = Math.max(0, 1440 * days.length - neutral)
+  const available = availableSum
   const unproductive = Math.max(0, available - productive)
   const productivePercent = available > 0 ? (productive / available) * 100 : null
 
@@ -260,16 +284,19 @@ export function bucketSeries(
     const days = eachDateKey(b.startKey, b.endKey)
     let productive = 0
     let neutral = 0
+    let availableSum = 0
     let hasEntries = false
 
     for (const day of days) {
       const m = dayMetrics(entries, day, allowances, neutralEntries)
+      if (!m.active) continue // only logged days render — bars fill up as you log
       productive += m.productive
       neutral += m.neutral
+      availableSum += m.available
       if (m.productive > 0) hasEntries = true
     }
 
-    const available = Math.max(0, 1440 * days.length - neutral)
+    const available = availableSum
     const unproductive = Math.max(0, available - productive)
     const productivePercent = available > 0 ? (productive / available) * 100 : null
 
@@ -390,7 +417,7 @@ export interface DayProjection {
 }
 
 export function projectDay(m: DayMetrics, nowMinutes: number): DayProjection | null {
-  if (m.available <= 0) return null
+  if (!m.active || m.available <= 0) return null
   const elapsedOpen = Math.min(Math.max(nowMinutes - m.sleepMinutes, 0), m.available)
   const share = elapsedOpen / m.available
   // Too early to say anything, or the day is effectively done.
@@ -421,7 +448,7 @@ export interface GppStats {
   monthlyDollars: number // avg/day × 30 × $/h
   monthlyHours: number // avg/day × 30
   annualDollars: number // monthly × 12 — the long-run pace line
-  goalPercent: number // annual pace vs the $1T goal
+  goalPercent: number // monthly GPP vs the $1T/month goal
 }
 
 export function gppStats(allEntries: EntryWithSub[], today: Date = new Date()): GppStats {
@@ -460,7 +487,7 @@ export function gppStats(allEntries: EntryWithSub[], today: Date = new Date()): 
     monthlyDollars,
     monthlyHours: (avgPerDayMinutes / 60) * DAYS_PER_MONTH,
     annualDollars,
-    goalPercent: (annualDollars / GPP_GOAL_DOLLARS) * 100,
+    goalPercent: (monthlyDollars / GPP_GOAL_DOLLARS) * 100,
   }
 }
 
@@ -508,6 +535,7 @@ export function trailingProductive(allEntries: EntryWithSub[], windowDays = 30, 
   }
 }
 
+// % of the $1T/month goal a monthly-dollar figure represents.
 export function gppGoalPercent(dollars: number): number {
   return (dollars / GPP_GOAL_DOLLARS) * 100
 }
@@ -572,6 +600,7 @@ export function compositionForRange(
   const totals = rangeMetrics(entries, startDateKey, endDateKey, allowances, neutralEntries)
 
   const slices: CompositionSlice[] = []
+  // Donut covers logged days only — unlogged days contribute nothing at all.
 
   // Productive: per department, plain hours, biggest first.
   for (const d of departmentShares(windowEntries.filter((e) => !isSleepEntry(e)))) {
@@ -585,12 +614,14 @@ export function compositionForRange(
     })
   }
 
-  // Neutral: sleep total (logged or default), then per-activity logs, then
-  // whatever baseline the assumption still covers on unlogged days.
+  // Neutral: sleep + per-activity logs, then whatever a Settings pin still
+  // covers. Only logged days are touched — no assumed sleep, no lump for
+  // silent days.
   let sleepTotal = 0
   let mealsTotal = 0
   for (const day of days) {
     const m = dayMetrics(entries, day, allowances, neutralEntries)
+    if (!m.active) continue
     sleepTotal += m.sleepMinutes
     mealsTotal += m.mealsMinutes
   }
@@ -601,6 +632,7 @@ export function compositionForRange(
     if (n.activity === 'sleep') continue
     byActivity.set(n.activity, (byActivity.get(n.activity) ?? 0) + n.minutes)
   }
+  const hasActiveDays = totals.activeDays > 0
   const loggedOtherTotal = Array.from(byActivity.values()).reduce((a, b) => a + b, 0)
   const knownNeutral = new Map(NEUTRAL_ACTIVITY_LIST.map((a) => [a.id, a.label]))
   const activityRows = Array.from(byActivity.entries())
@@ -663,7 +695,9 @@ export function compositionForRange(
     })
   }
 
-  return { slices: slices.filter((s) => s.minutes > 0), totals }
+  // A range nobody logged shows as genuinely empty — the donut renders its
+  // blank state instead of pretending a full day happened.
+  return { slices: hasActiveDays ? slices.filter((s) => s.minutes > 0) : [], totals }
 }
 
 // "today" · "3d ago" · "2w ago" · "4mo ago" — for the Database index.
