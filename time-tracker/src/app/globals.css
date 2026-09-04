@@ -1,0 +1,95 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--ink);
+  --color-foreground: var(--ink-foreground);
+  --font-sans: var(--font-plex-sans);
+  --font-serif: var(--font-fraunces);
+  --font-mono: var(--font-geist-mono);
+  --color-sidebar-ring: var(--ink-border);
+  --color-sidebar-border: var(--ink-border);
+  --color-sidebar-accent-foreground: var(--ink-foreground);
+  --color-sidebar-accent: var(--paper);
+  --color-sidebar-primary-foreground: var(--ink);
+  --color-sidebar-primary: var(--growth);
+  --color-sidebar-foreground: var(--ink-foreground);
+  --color-sidebar: var(--paper);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--growth);
+  --color-input: var(--ink-border);
+  --color-border: var(--ink-border);
+  --color-destructive: var(--depreciation);
+  --color-accent-foreground: var(--ink-foreground);
+  --color-accent: var(--paper);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--paper);
+  --color-secondary-foreground: var(--ink-foreground);
+  --color-secondary: var(--paper);
+  --color-primary-foreground: var(--ink);
+  --color-primary: var(--ink-foreground);
+  --color-popover-foreground: var(--ink-foreground);
+  --color-popover: var(--paper);
+  --color-card-foreground: var(--ink-foreground);
+  --color-card: var(--paper);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+/* The 6 tokens from spec. Dark mode is the only theme. */
+:root,
+.dark {
+  --radius: 0.5rem;
+  /* surfaces */
+  --ink: oklch(0.14 0.02 250);             /* deep navy background */
+  --paper: oklch(0.19 0.015 60);            /* warm card surface, visibly distinct from ink */
+  --ink-border: oklch(1 0 0 / 8%);         /* hairline dividers */
+
+  /* accents */
+  --growth: oklch(0.75 0.13 85);           /* muted gold for positive NPP/GPP */
+  --depreciation: oklch(0.62 0.20 22);     /* red, slightly muted for dark mode */
+
+  /* text */
+  --ink-foreground: oklch(0.94 0.01 60);   /* off-white */
+  --muted-foreground: oklch(0.62 0.01 60); /* secondary text */
+
+  /* chart palette — used by recharts */
+  --chart-1: oklch(0.75 0.13 85);           /* growth gold */
+  --chart-2: oklch(0.62 0.20 22);           /* depreciation red */
+  --chart-3: oklch(0.65 0.13 250);          /* blue-ish for focus line */
+  --chart-4: oklch(0.78 0.10 200);          /* teal */
+  --chart-5: oklch(0.70 0.10 150);          /* green */
+
+  /* neutral layer of the day-composition bar (sleep + meals) */
+  --neutral-layer: oklch(0.48 0.015 250);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-plex-sans), system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .font-serif {
+    font-family: var(--font-fraunces), Georgia, serif;
+    font-feature-settings: "ss01", "ss02";
+  }
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: oklch(1 0 0 / 10%); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: oklch(1 0 0 / 18%); }
+}
