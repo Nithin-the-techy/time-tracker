@@ -13,10 +13,6 @@ export async function POST(req: NextRequest) {
   if (!goalId || !title || plannedMinutes < 1 || plannedMinutes > 720 || !STATUSES.has(status)) {
     return NextResponse.json({ error: 'goal, title, and planned minutes (1–720) are required' }, { status: 400 })
   }
-  if (status === 'today') {
-    const committed = await db.goalAction.count({ where: { status: { in: ['today', 'in_progress'] } } })
-    if (committed >= 3) return NextResponse.json({ error: 'Today is full: finish, defer, or cancel an action first' }, { status: 409 })
-  }
   const goal = await db.goal.findUnique({ where: { id: goalId } })
   if (!goal) return NextResponse.json({ error: 'goal not found' }, { status: 400 })
 
@@ -79,9 +75,7 @@ export async function PATCH(req: NextRequest) {
     const status = String(body.status)
     if (!STATUSES.has(status)) return NextResponse.json({ error: 'invalid status' }, { status: 400 })
     if (status === 'today' && existing.status !== 'today' && existing.status !== 'in_progress') {
-      const committed = await db.goalAction.count({ where: { status: { in: ['today', 'in_progress'] } } })
-      if (committed >= 3) return NextResponse.json({ error: 'Today is full: maximum three committed actions' }, { status: 409 })
-      data.todayOrder = committed
+      data.todayOrder = await db.goalAction.count({ where: { status: { in: ['today', 'in_progress'] } } })
     }
     if (status === 'backlog' || status === 'completed' || status === 'cancelled') data.todayOrder = null
     data.status = status

@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Fraunces, IBM_Plex_Sans } from "next/font/google";
 import "./globals.css";
-import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Providers } from "@/components/providers";
 
@@ -36,8 +35,7 @@ export default function RootLayout({
     <html lang="en" className="dark" suppressHydrationWarning>
       <body className={`${fraunces.variable} ${plexSans.variable} antialiased bg-background text-foreground`}>
         <Providers>{children}</Providers>
-        <Toaster />
-        <Sonner />
+        <Sonner position="top-right" richColors closeButton />
       </body>
     </html>
   );

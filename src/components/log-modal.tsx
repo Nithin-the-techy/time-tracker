@@ -18,7 +18,7 @@ export function LogModal() {
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && closeLogModal()}>
-      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto md:left-[calc(50%+7rem)]">
         {open && (
           <LogFormInner presetDeptSlug={presetDeptSlug} onSaved={closeLogModal} />
         )}
@@ -35,8 +35,8 @@ function LogFormInner({ presetDeptSlug, onSaved }: { presetDeptSlug: string | nu
   return (
     <>
       <DialogHeader>
-        <DialogTitle>Add record</DialogTitle>
-        <DialogDescription>Record productive, neutral, or negative time.</DialogDescription>
+        <DialogTitle>Log time</DialogTitle>
+        <DialogDescription>Use this for completed time that was not recorded by a running step.</DialogDescription>
       </DialogHeader>
       <div className="pt-2">
         <LogForm presetDepartmentId={presetDept?.id} onSaved={onSaved} />

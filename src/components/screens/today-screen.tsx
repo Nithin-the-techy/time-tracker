@@ -58,6 +58,13 @@ export function TodayScreen() {
     }
   }
 
+  async function defer(action: GoalAction) {
+    setBusy(action.id)
+    try { await store.updateGoalAction(action.id, { status: 'backlog' }) }
+    catch (error) { toast.error(error instanceof Error ? error.message : 'Could not defer step') }
+    finally { setBusy(null) }
+  }
+
   if (loading) return <p className="text-sm text-muted-foreground py-12 text-center">Loading the operation…</p>
 
   if (!primary) {
@@ -73,13 +80,13 @@ export function TodayScreen() {
 
   return (
     <div className="space-y-5 max-w-3xl mx-auto">
-      <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Now</p>
+      <div className="flex items-baseline justify-between"><h2 className="font-serif text-2xl">Today</h2><span className="text-sm text-muted-foreground">{actions.reduce((sum, item) => sum + item.action.plannedMinutes, 0)}m planned</span></div>
 
       {running ? (
         <RunningSession session={running.session} action={running.action} goalTitle={running.goal.title} />
       ) : (
         <Card className="border-[var(--growth)]/25">
-          <CardHeader className="pb-2"><CardTitle className="text-sm">Committed now · {actions.length}/3</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-base">Next steps</CardTitle></CardHeader>
           <CardContent className="space-y-2">
             {actions.length === 0 ? (
               <div className="py-5 text-center">
@@ -91,8 +98,8 @@ export function TodayScreen() {
                 <span className="font-serif text-xl text-muted-foreground w-5">{index + 1}</span>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium">{action.title}</p>
-                  <p className="text-[11px] text-muted-foreground mt-1">
-                    {goal.title} · {action.context} · {action.plannedMinutes}m
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {goal.title} · {action.subdepartment?.name ?? goal.department.name.replace('Department of ', '')} · {action.plannedMinutes}m
                   </p>
                   {action.definitionOfDone && <p className="text-xs mt-2">Done means: {action.definitionOfDone}</p>}
                   <div className="flex gap-2 mt-3">
@@ -102,6 +109,7 @@ export function TodayScreen() {
                     <Button size="sm" variant="ghost" onClick={() => shrink(action)} disabled={busy === action.id}>
                       <RotateCcw className="h-3.5 w-3.5 mr-1" /> Resize
                     </Button>
+                    <Button size="sm" variant="ghost" onClick={() => defer(action)} disabled={busy === action.id}>Defer</Button>
                   </div>
                 </div>
               </div>

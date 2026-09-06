@@ -1,15 +1,15 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { ArrowLeft, Check, ChevronRight, CirclePlus, FlaskConical, Gauge, GraduationCap, Landmark, Pause, Play, Plus, Wrench } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { useDepartments, useGoals, useSprints, store, type Goal } from '@/lib/hooks'
-import { departmentModule, DEPARTMENT_MODULES } from '@/lib/department-modules'
-import { daysRemaining, formatTargetValue, goalProgress, targetProgress } from '@/lib/goal-metrics'
+import { daysRemaining, goalProgress } from '@/lib/goal-metrics'
 import { toKey, addDays } from '@/lib/dates'
 import { useUIStore } from '@/store/ui-store'
 import { cn } from '@/lib/utils'
@@ -35,21 +35,25 @@ export function GoalsScreen() {
   if (activeGoal) return <GoalWorkbench goal={activeGoal} onBack={closeGoal} />
 
   return (
-    <div className="space-y-6 max-w-3xl mx-auto">
-      <div>
-        <h1 className="font-serif text-3xl">Work</h1>
-      </div>
+    <div className="space-y-7 max-w-4xl mx-auto">
+      <h1 className="font-serif text-3xl">Work</h1>
 
-      <SprintPanel />
-      <CreateGoalPanel departments={departments} sprintId={activeSprint?.id ?? null} sprintName={activeSprint?.name ?? null} />
       {hasExecution && <TodayScreen />}
+      <SprintPanel />
+
+      <section className="space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="font-serif text-2xl">Outcomes</h2>
+          <CreateGoalPanel departments={departments} sprintId={activeSprint?.id ?? null} sprintName={activeSprint?.name ?? null} />
+        </div>
 
       {loading ? <p className="text-sm text-muted-foreground text-center py-8">Loading…</p> : visibleGoals.length === 0 ? null : (
         <>
-          {activeSprint && <section className="space-y-3"><p className="text-sm text-muted-foreground">{activeSprint.name}</p>{sprintGoals.length > 0 ? <div className="space-y-3">{sprintGoals.map((goal) => <GoalRow key={goal.id} goal={goal} onClick={() => openGoal(goal.id)} />)}</div> : <p className="text-sm text-muted-foreground">Add a goal to this Sprint.</p>}</section>}
-          {otherGoals.length > 0 && <section className="space-y-3"><p className="text-sm text-muted-foreground">Other goals</p><div className="space-y-3">{otherGoals.map((goal) => <GoalRow key={goal.id} goal={goal} onClick={() => openGoal(goal.id)} />)}</div></section>}
+          {activeSprint && (sprintGoals.length > 0 ? <div className="space-y-2">{sprintGoals.map((goal) => <GoalRow key={goal.id} goal={goal} onClick={() => openGoal(goal.id)} />)}</div> : <div className="rounded-lg border border-dashed border-border px-4 py-7 text-center text-sm text-muted-foreground">No outcomes in this Sprint.</div>)}
+          {otherGoals.length > 0 && <section className="space-y-2 pt-2"><p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Outside this Sprint</p><div className="space-y-2">{otherGoals.map((goal) => <GoalRow key={goal.id} goal={goal} onClick={() => openGoal(goal.id)} />)}</div></section>}
         </>
       )}
+      </section>
     </div>
   )
 }
@@ -79,38 +83,35 @@ function CreateGoalPanel({ departments, sprintId, sprintName }: { departments: R
   }
 
   return (
-    <Card className="border-[var(--growth)]/20">
-      <CardContent className="p-4 space-y-4">
-        {!open ? (
-          <Button variant="outline" className="w-full" onClick={() => setOpen(true)}><CirclePlus className="h-4 w-4 mr-1" /> {sprintName ? `Add goal to ${sprintName}` : 'Create goal'}</Button>
-        ) : (
-          <div className="space-y-3">
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild><Button variant="outline" size="sm"><CirclePlus className="h-4 w-4 mr-1" /> Add outcome</Button></DialogTrigger>
+      <DialogContent className="sm:max-w-xl md:left-[calc(50%+7rem)]">
+        <DialogHeader><DialogTitle className="font-serif text-xl">New outcome</DialogTitle><DialogDescription>{sprintName ? `Adds to ${sprintName}` : 'Not attached to a Sprint'}</DialogDescription></DialogHeader>
+          <div className="space-y-4">
             <div className="grid sm:grid-cols-2 gap-3">
-              <div><Label className="text-[11px]">Department</Label><select value={effectiveDepartmentId} onChange={(e) => setDepartmentId(e.target.value)} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">{departments.map((d) => <option key={d.id} value={d.id}>{d.name.replace('Department of ', '')} · {departmentModule(d.moduleKey).label}</option>)}</select></div>
-              <div><Label className="text-[11px]">Target date</Label><Input type="date" min={today} value={targetDate} onChange={(e) => setTargetDate(e.target.value)} /></div>
+              <div><Label className="text-xs">Area</Label><select value={effectiveDepartmentId} onChange={(e) => setDepartmentId(e.target.value)} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">{departments.map((d) => <option key={d.id} value={d.id}>{d.name.replace('Department of ', '')}</option>)}</select></div>
+              <div><Label className="text-xs">Due</Label><Input type="date" min={today} value={targetDate} onChange={(e) => setTargetDate(e.target.value)} /></div>
             </div>
-            <div><Label className="text-[11px]">Goal</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="What are you trying to finish?" /></div>
-            <div><Label className="text-[11px]">Done means</Label><Textarea value={outcome} onChange={(e) => setOutcome(e.target.value)} rows={2} placeholder="The result that counts as finished" /></div>
-            <div className="flex gap-2"><Button onClick={createCustom} disabled={busy || !title.trim() || !outcome.trim()}>Create goal</Button><Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button></div>
+            <div><Label className="text-xs">Outcome</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Get a 7 in Physics" /></div>
+            <div><Label className="text-xs">Finished when</Label><Textarea value={outcome} onChange={(e) => setOutcome(e.target.value)} rows={2} placeholder="What result proves this is done?" /></div>
+            <div className="flex gap-2"><Button onClick={createCustom} disabled={busy || !title.trim() || !outcome.trim()}>Add outcome</Button><Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button></div>
           </div>
-        )}
-      </CardContent>
-    </Card>
+      </DialogContent>
+    </Dialog>
   )
 }
 
 function GoalRow({ goal, onClick }: { goal: Goal; onClick: () => void }) {
   const progress = goalProgress(goal)
-  const workflow = departmentModule(goal.moduleKey)
   const nextActions = goal.actions.filter((action) => !['completed', 'cancelled'].includes(action.status)).length
   return (
     <button onClick={onClick} className="w-full text-left border border-border rounded-lg p-4 hover:border-foreground/25 transition">
       <div className="flex items-start gap-3">
         <ModuleIcon moduleKey={goal.moduleKey} />
         <div className="min-w-0 flex-1">
-          <div className="flex items-start justify-between gap-3"><div><p className="font-serif text-xl">{goal.title}</p><p className="text-xs text-muted-foreground mt-1">{goal.department.name.replace('Department of ', '')} · {workflow.label} · {goal.status}</p></div><ChevronRight className="h-4 w-4 text-muted-foreground mt-1" /></div>
+          <div className="flex items-start justify-between gap-3"><div><p className="font-serif text-xl">{goal.title}</p><p className="text-xs text-muted-foreground mt-1">{goal.department.name.replace('Department of ', '')}</p></div><ChevronRight className="h-4 w-4 text-muted-foreground mt-1" /></div>
           <div className="flex items-center gap-3 mt-3"><div className="h-1.5 bg-muted rounded-full overflow-hidden flex-1"><div className="h-full bg-[var(--growth)]" style={{ width: `${progress * 100}%` }} /></div><span className="text-sm tabular-nums">{Math.round(progress * 100)}%</span></div>
-          <p className="text-[11px] text-muted-foreground mt-2">{deadlineLabel(daysRemaining(goal.targetDate))} · {nextActions} actions</p>
+          <p className="text-xs text-muted-foreground mt-2">{deadlineLabel(daysRemaining(goal.targetDate))} · {nextActions} open step{nextActions === 1 ? '' : 's'}</p>
         </div>
       </div>
     </button>
@@ -118,16 +119,14 @@ function GoalRow({ goal, onClick }: { goal: Goal; onClick: () => void }) {
 }
 
 function GoalWorkbench({ goal, onBack }: { goal: Goal; onBack: () => void }) {
-  const [section, setSection] = useState<'targets' | 'problems' | 'actions'>('actions')
   const [editing, setEditing] = useState(false)
   const [title, setTitle] = useState(goal.title)
   const [outcome, setOutcome] = useState(goal.outcome)
   const progress = goalProgress(goal)
-  const unresolved = goal.problems.filter((p) => p.status === 'open')
 
   return (
     <div className="space-y-5 max-w-3xl mx-auto">
-      <Button variant="ghost" size="sm" onClick={onBack}><ArrowLeft className="h-4 w-4 mr-1" /> All work</Button>
+      <Button variant="ghost" size="sm" onClick={onBack}><ArrowLeft className="h-4 w-4 mr-1" /> Work</Button>
       <section>
         <div className="flex items-start justify-between gap-4"><div className="min-w-0 flex-1"><p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">{goal.department.name.replace('Department of ', '')}</p>{editing ? <div className="space-y-2 mt-2"><Input value={title} onChange={(event) => setTitle(event.target.value)} /><Textarea value={outcome} onChange={(event) => setOutcome(event.target.value)} rows={2} /><div className="flex gap-2"><Button size="sm" onClick={() => { store.updateGoal(goal.id, { title, outcome }).then(() => setEditing(false)).catch((error) => toast.error(error.message)) }}>Save</Button><Button size="sm" variant="ghost" onClick={() => { setTitle(goal.title); setOutcome(goal.outcome); setEditing(false) }}>Cancel</Button></div></div> : <><h1 className="font-serif text-3xl mt-1">{goal.title}</h1><p className="text-sm text-muted-foreground mt-2">{goal.outcome}</p></>}</div><div className="text-right"><p className="font-serif text-4xl text-[var(--growth)]">{Math.round(progress * 100)}%</p><p className="text-[11px] text-muted-foreground">{deadlineLabel(daysRemaining(goal.targetDate))}</p></div></div>
         <div className="h-2 bg-muted rounded-full overflow-hidden mt-4"><div className="h-full bg-[var(--growth)]" style={{ width: `${progress * 100}%` }} /></div>
@@ -139,54 +138,34 @@ function GoalWorkbench({ goal, onBack }: { goal: Goal; onBack: () => void }) {
         </div>
       </section>
 
-      <div className="grid grid-cols-3 rounded-md border border-border p-1">
-        {(['targets', 'problems', 'actions'] as const).map((value) => <button key={value} onClick={() => setSection(value)} className={cn('rounded px-3 py-2 text-sm capitalize', section === value ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground')}>{value === 'problems' ? 'Blockers' : value}{value === 'problems' ? ` · ${unresolved.length}` : ''}</button>)}
-      </div>
-
-      {section === 'targets' && <TargetsPanel goal={goal} />}
-      {section === 'problems' && <ProblemsPanel goal={goal} />}
-      {section === 'actions' && <ActionsPanel goal={goal} />}
+      <section className="space-y-3"><h2 className="font-serif text-2xl">Steps</h2><ActionsPanel goal={goal} /></section>
     </div>
   )
 }
 
-function TargetsPanel({ goal }: { goal: Goal }) {
-  const workflow = departmentModule(goal.moduleKey)
-  const [label, setLabel] = useState('')
-  const [unit, setUnit] = useState(workflow.suggestedUnits[0])
-  const [targetValue, setTargetValue] = useState('')
-  const [subdepartmentId, setSubdepartmentId] = useState('')
-  async function add() {
-    try {
-      await store.addGoalTarget({ goalId: goal.id, label, unit, targetValue: Number(targetValue), subdepartmentId: subdepartmentId || null, progressSource: unit === 'minutes' ? 'productive_minutes' : 'manual' })
-      setLabel(''); setTargetValue('')
-    } catch (error) { toast.error(error instanceof Error ? error.message : 'Could not add target') }
-  }
-  return <div className="space-y-3">
-    {goal.targets.map((target) => <div key={target.id} className="border border-border rounded-md p-3"><div className="flex justify-between gap-3"><div><p className="text-sm font-medium">{target.label}</p><p className="text-[11px] text-muted-foreground">{target.progressSource.replace('_', ' ')}</p></div><p className="text-sm tabular-nums">{formatTargetValue(target.currentValue, target.unit)} / {formatTargetValue(target.targetValue, target.unit)}</p></div><div className="h-1.5 bg-muted rounded-full mt-2"><div className="h-full bg-[var(--growth)] rounded-full" style={{ width: `${targetProgress(target) * 100}%` }} /></div>{target.progressSource === 'manual' && <div className="flex items-center gap-2 mt-2"><Input type="number" min={0} className="h-8 w-28" defaultValue={target.currentValue} onBlur={(e) => store.updateGoalTarget(target.id, { currentValue: Number(e.target.value) }).catch((err) => toast.error(err.message))} /><span className="text-[11px] text-muted-foreground">update current value</span></div>}</div>)}
-    <Card><CardHeader className="pb-2"><CardTitle className="text-sm">Add {workflow.targetNoun}</CardTitle></CardHeader><CardContent className="grid sm:grid-cols-2 gap-2"><Input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Label" /><select value={subdepartmentId} onChange={(e) => setSubdepartmentId(e.target.value)} className="h-10 rounded-md border border-input bg-background px-3 text-sm"><option value="">No sub-department</option>{goal.department.subdepartments.map((sub) => <option key={sub.id} value={sub.id}>{sub.name}</option>)}</select><select value={unit} onChange={(e) => setUnit(e.target.value)} className="h-10 rounded-md border border-input bg-background px-3 text-sm">{workflow.suggestedUnits.map((u) => <option key={u}>{u}</option>)}</select><Input type="number" min={0.1} value={targetValue} onChange={(e) => setTargetValue(e.target.value)} placeholder="Target value" /><Button className="sm:col-span-2" onClick={add} disabled={!label.trim() || Number(targetValue) <= 0}><Plus className="h-4 w-4 mr-1" /> Add target</Button></CardContent></Card>
-  </div>
-}
-
-function ProblemsPanel({ goal }: { goal: Goal }) {
-  const workflow = departmentModule(goal.moduleKey)
-  const [statement, setStatement] = useState('')
-  const [evidence, setEvidence] = useState('')
-  async function add() { try { await store.addGoalProblem({ goalId: goal.id, statement, evidence }); setStatement(''); setEvidence('') } catch (error) { toast.error(error instanceof Error ? error.message : 'Could not add problem') } }
-  return <div className="space-y-3">{goal.problems.map((problem) => <div key={problem.id} className={cn('border rounded-md p-3 flex gap-3', problem.status === 'open' ? 'border-amber-400/25' : 'border-border opacity-70')}><div className="flex-1"><p className="text-sm">{problem.statement}</p>{problem.evidence && <p className="text-xs text-muted-foreground mt-1">Solved when: {problem.evidence}</p>}</div>{problem.status === 'open' && <Button size="sm" variant="outline" onClick={() => store.updateGoalProblem(problem.id, { status: 'solved' })}><Check className="h-3.5 w-3.5 mr-1" /> Solved</Button>}</div>)}<Card><CardHeader className="pb-2"><CardTitle className="text-sm">Expose a gap</CardTitle></CardHeader><CardContent className="space-y-2"><p className="text-xs text-muted-foreground">{workflow.problemPrompt}</p><Textarea value={statement} onChange={(e) => setStatement(e.target.value)} rows={2} placeholder="Current gap" /><Input value={evidence} onChange={(e) => setEvidence(e.target.value)} placeholder="Evidence that means solved" /><Button onClick={add} disabled={!statement.trim()}><Plus className="h-4 w-4 mr-1" /> Add problem</Button></CardContent></Card></div>
-}
-
 function ActionsPanel({ goal }: { goal: Goal }) {
-  const workflow = departmentModule(goal.moduleKey)
   const [title, setTitle] = useState('')
   const [done, setDone] = useState('')
-  const [minutes, setMinutes] = useState('25')
-  const [context, setContext] = useState(workflow.suggestedContexts[0])
+  const [minutes, setMinutes] = useState('45')
+  const [dueDate, setDueDate] = useState(toKey(new Date()))
   const [subdepartmentId, setSubdepartmentId] = useState(goal.department.subdepartments[0]?.id ?? '')
   const [commit, setCommit] = useState(true)
-  async function add() { try { await store.addGoalAction({ goalId: goal.id, title, definitionOfDone: done || null, plannedMinutes: Number(minutes), context, subdepartmentId: subdepartmentId || null, status: commit ? 'today' : 'backlog' }); setTitle(''); setDone('') } catch (error) { toast.error(error instanceof Error ? error.message : 'Could not add action') } }
+  const [busy, setBusy] = useState(false)
+  async function add() {
+    if (busy) return
+    setBusy(true)
+    try {
+      await store.addGoalAction({ goalId: goal.id, title, definitionOfDone: done || null, plannedMinutes: Number(minutes), context: 'focused', dueDate: dueDate || null, subdepartmentId: subdepartmentId || null, status: commit ? 'today' : 'backlog' })
+      setTitle(''); setDone('')
+      toast.success(commit ? 'Added to Today' : 'Step saved')
+    } catch (error) { toast.error(error instanceof Error ? error.message : 'Could not add step') }
+    finally { setBusy(false) }
+  }
   const actions = [...goal.actions].sort((a, b) => statusOrder(a.status) - statusOrder(b.status))
-  return <div className="space-y-3">{actions.map((action) => <div key={action.id} className="border border-border rounded-md p-3 flex items-start gap-3"><div className="flex-1"><p className={cn('text-sm', action.status === 'completed' && 'line-through text-muted-foreground')}>{action.title}</p><p className="text-[11px] text-muted-foreground mt-1">{action.plannedMinutes}m · {action.context} · {action.status.replace('_', ' ')}</p>{action.definitionOfDone && <p className="text-xs mt-1">{action.definitionOfDone}</p>}</div><div className="flex gap-1">{action.status === 'backlog' && <Button size="sm" variant="outline" onClick={() => store.updateGoalAction(action.id, { status: 'today' }).catch((err) => toast.error(err.message))}>Add to now</Button>}{!['completed', 'cancelled'].includes(action.status) && <Button size="sm" variant="ghost" onClick={() => store.updateGoalAction(action.id, { status: 'cancelled' }).catch((err) => toast.error(err.message))}>Archive</Button>}</div></div>)}<Card><CardHeader className="pb-2"><CardTitle className="text-sm">Add action</CardTitle></CardHeader><CardContent className="space-y-2"><div className="grid sm:grid-cols-[1fr_110px] gap-2"><Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="What will you do?" /><Input type="number" min={1} max={720} value={minutes} onChange={(e) => setMinutes(e.target.value)} /></div><Input value={done} onChange={(e) => setDone(e.target.value)} placeholder="Result when done (optional)" /><div className="grid sm:grid-cols-2 gap-2"><select value={subdepartmentId} onChange={(e) => setSubdepartmentId(e.target.value)} className="h-10 rounded-md border border-input bg-background px-3 text-sm"><option value="">No category</option>{goal.department.subdepartments.map((sub) => <option key={sub.id} value={sub.id}>{sub.name}</option>)}</select><select value={context} onChange={(e) => setContext(e.target.value)} className="h-10 rounded-md border border-input bg-background px-3 text-sm">{workflow.suggestedContexts.map((value) => <option key={value}>{value}</option>)}</select></div><label className="flex items-center gap-2 text-xs text-muted-foreground"><input type="checkbox" checked={commit} onChange={(e) => setCommit(e.target.checked)} /> Add to Now</label><Button onClick={add} disabled={!title.trim() || Number(minutes) <= 0}><Plus className="h-4 w-4 mr-1" /> Add action</Button></CardContent></Card></div>
+  return <div className="space-y-3">
+    {actions.filter((action) => action.status !== 'cancelled').map((action) => <div key={action.id} className="border-b border-border py-3 flex items-start gap-3"><div className="flex-1"><p className={cn('text-sm font-medium', action.status === 'completed' && 'line-through text-muted-foreground')}>{action.title}</p><p className="text-xs text-muted-foreground mt-1">{action.plannedMinutes}m{action.dueDate ? ` · ${action.dueDate}` : ''} · {action.status === 'today' ? 'Today' : action.status.replace('_', ' ')}</p>{action.definitionOfDone && <p className="text-sm text-muted-foreground mt-1">{action.definitionOfDone}</p>}</div><div className="flex gap-1">{action.status === 'backlog' && <Button size="sm" variant="outline" onClick={() => store.updateGoalAction(action.id, { status: 'today' }).catch((err) => toast.error(err.message))}>Today</Button>}{!['completed', 'cancelled'].includes(action.status) && <Button size="sm" variant="ghost" onClick={() => store.updateGoalAction(action.id, { status: 'cancelled' }).catch((err) => toast.error(err.message))}>Archive</Button>}</div></div>)}
+    <Card className="border-border/70"><CardHeader className="pb-2"><CardTitle className="text-base">Add step</CardTitle></CardHeader><CardContent className="space-y-3"><div className="grid sm:grid-cols-[1fr_110px] gap-2"><Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Concrete work to do" /><div><Label className="text-xs">Minutes</Label><Input type="number" min={1} max={720} value={minutes} onChange={(e) => setMinutes(e.target.value)} /></div></div><Input value={done} onChange={(e) => setDone(e.target.value)} placeholder="Finished when… (optional)" /><div className="grid sm:grid-cols-2 gap-2"><div><Label className="text-xs">Area</Label><select value={subdepartmentId} onChange={(e) => setSubdepartmentId(e.target.value)} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"><option value="">No category</option>{goal.department.subdepartments.map((sub) => <option key={sub.id} value={sub.id}>{sub.name}</option>)}</select></div><div><Label className="text-xs">Due</Label><Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} /></div></div><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={commit} onChange={(e) => setCommit(e.target.checked)} /> Put in Today</label><Button onClick={add} disabled={busy || !title.trim() || Number(minutes) <= 0}><Plus className="h-4 w-4 mr-1" /> Add step</Button></CardContent></Card>
+  </div>
 }
 
 function ModuleIcon({ moduleKey }: { moduleKey: string }) {

@@ -21,6 +21,7 @@ export function SprintPanel() {
   const [busy, setBusy] = useState(false)
   const [goalId, setGoalId] = useState('')
   const [editing, setEditing] = useState(false)
+  const [attaching, setAttaching] = useState(false)
   const active = useMemo(() => sprints.find((s) => s.status === 'active'), [sprints])
   const visible = sprints.filter((s) => s.status !== 'archived').slice(0, 4)
 
@@ -41,12 +42,14 @@ export function SprintPanel() {
   }
 
   async function attachGoal() {
-    if (!active || !goalId) return
+    if (!active || !goalId || attaching) return
+    setAttaching(true)
     try {
       await store.updateSprint(active.id, { goalIds: [...active.goals.map((link) => link.goalId), goalId] })
       setGoalId('')
-      toast.success('Goal added to Sprint')
-    } catch (error) { toast.error(error instanceof Error ? error.message : 'Could not add goal') }
+      toast.success('Outcome added to Sprint')
+    } catch (error) { toast.error(error instanceof Error ? error.message : 'Could not add outcome') }
+    finally { setAttaching(false) }
   }
 
   async function archiveActive() {
@@ -60,25 +63,25 @@ export function SprintPanel() {
   return (
     <Card className="border-[var(--growth)]/25">
       <CardHeader className="pb-2 flex-row items-center justify-between space-y-0">
-        <CardTitle className="text-sm flex items-center gap-2"><CalendarRange className="h-4 w-4 text-[var(--growth)]" /> {active ? 'Active Sprint' : 'Sprint'}</CardTitle>
-        <Button variant="ghost" size="sm" onClick={() => setOpen((value) => !value)}><Plus className="h-4 w-4 mr-1" /> New</Button>
+        <CardTitle className="text-base flex items-center gap-2"><CalendarRange className="h-4 w-4 text-[var(--growth)]" /> {active ? 'Current Sprint' : 'Sprint'}</CardTitle>
+        <Button variant="ghost" size="sm" onClick={() => setOpen((value) => !value)}><Plus className="h-4 w-4 mr-1" /> New Sprint</Button>
       </CardHeader>
       <CardContent className="space-y-3">
         {active ? (
           <div className="rounded-md border border-[var(--growth)]/30 p-3">
             <div className="flex items-start justify-between gap-3">
-              <div><p className="font-serif text-xl">{active.name}</p><p className="text-xs text-muted-foreground">{active.phase || 'Active phase'} · {active.startDate} → {active.endDate}</p></div>
+              <div className="min-w-0"><p className="font-serif text-xl">{active.name}</p><p className="text-sm text-muted-foreground mt-1">{active.startDate} → {active.endDate}</p>{active.phase && <p className="text-sm text-muted-foreground mt-2">{active.phase}</p>}</div>
               <div className="flex gap-1"><Button size="sm" variant="ghost" onClick={() => setEditing((value) => !value)}><Pencil className="h-3.5 w-3.5" /></Button><Button size="sm" variant="ghost" onClick={() => setStatus(active.id, 'paused')}><Pause className="h-3.5 w-3.5 mr-1" /> Pause</Button></div>
             </div>
-            {editing && <div className="grid sm:grid-cols-2 gap-2 mt-3"><Input defaultValue={active.name} onBlur={(event) => { const name = event.target.value.trim(); if (name && name !== active.name) store.updateSprint(active.id, { name }).catch((error) => toast.error(error.message)) }} /><Input defaultValue={active.phase ?? ''} placeholder="Phase note" onBlur={(event) => { const phase = event.target.value.trim() || null; if (phase !== active.phase) store.updateSprint(active.id, { phase }).catch((error) => toast.error(error.message)) }} /><Button size="sm" variant="ghost" className="sm:col-span-2 justify-start text-muted-foreground" onClick={archiveActive}>Archive Sprint</Button></div>}
-            <p className="text-xs text-muted-foreground mt-3">{active.goals.length} goal{active.goals.length === 1 ? '' : 's'}</p>
-            {availableGoals.length > 0 && <div className="flex gap-2 mt-3"><select value={goalId} onChange={(event) => setGoalId(event.target.value)} className="h-9 min-w-0 flex-1 rounded-md border border-input bg-background px-2 text-sm"><option value="">Add existing goal…</option>{availableGoals.map((goal) => <option key={goal.id} value={goal.id}>{goal.title}</option>)}</select><Button size="sm" variant="outline" onClick={attachGoal} disabled={!goalId}>Add</Button></div>}
+            {editing && <div className="grid sm:grid-cols-2 gap-3 mt-4 rounded-md bg-background/50 p-3"><div><Label className="text-xs">Name</Label><Input defaultValue={active.name} onBlur={(event) => { const name = event.target.value.trim(); if (name && name !== active.name) store.updateSprint(active.id, { name }).catch((error) => toast.error(error.message)) }} /></div><div><Label className="text-xs">Focus</Label><Input defaultValue={active.phase ?? ''} placeholder="What this period is for" onBlur={(event) => { const phase = event.target.value.trim() || null; if (phase !== active.phase) store.updateSprint(active.id, { phase }).catch((error) => toast.error(error.message)) }} /></div><div><Label className="text-xs">Starts</Label><Input type="date" defaultValue={active.startDate} onBlur={(event) => store.updateSprint(active.id, { startDate: event.target.value }).catch((error) => toast.error(error.message))} /></div><div><Label className="text-xs">Ends</Label><Input type="date" defaultValue={active.endDate} onBlur={(event) => store.updateSprint(active.id, { endDate: event.target.value }).catch((error) => toast.error(error.message))} /></div><Button size="sm" variant="ghost" className="sm:col-span-2 justify-start text-muted-foreground" onClick={archiveActive}>Archive Sprint</Button></div>}
+            <p className="text-xs text-muted-foreground mt-3">{active.goals.length} outcome{active.goals.length === 1 ? '' : 's'}</p>
+            {availableGoals.length > 0 && <div className="flex gap-2 mt-3"><select value={goalId} onChange={(event) => setGoalId(event.target.value)} className="h-9 min-w-0 flex-1 rounded-md border border-input bg-background px-2 text-sm"><option value="">Attach existing outcome…</option>{availableGoals.map((goal) => <option key={goal.id} value={goal.id}>{goal.title}</option>)}</select><Button size="sm" variant="outline" onClick={attachGoal} disabled={!goalId || attaching}>Attach</Button></div>}
           </div>
         ) : null}
 
         {open && <div className="border-t border-border pt-3 space-y-2">
-          <div className="grid sm:grid-cols-2 gap-2"><div><Label className="text-[11px]">Name</Label><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Current execution phase" /></div><div><Label className="text-[11px]">Phase note (optional)</Label><Input value={phase} onChange={(e) => setPhase(e.target.value)} placeholder="What this phase is about" /></div></div>
-          <div className="grid sm:grid-cols-2 gap-2"><div><Label className="text-[11px]">Starts</Label><Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} /></div><div><Label className="text-[11px]">Ends</Label><Input type="date" min={startDate} value={endDate} onChange={(e) => setEndDate(e.target.value)} /></div></div>
+          <div className="grid sm:grid-cols-2 gap-2"><div><Label className="text-xs">Name</Label><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Current execution period" /></div><div><Label className="text-xs">Focus (optional)</Label><Input value={phase} onChange={(e) => setPhase(e.target.value)} placeholder="What this period is for" /></div></div>
+          <div className="grid sm:grid-cols-2 gap-2"><div><Label className="text-xs">Starts</Label><Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} /></div><div><Label className="text-xs">Ends</Label><Input type="date" min={startDate} value={endDate} onChange={(e) => setEndDate(e.target.value)} /></div></div>
           <Button onClick={create} disabled={busy || !name.trim()}><Play className="h-4 w-4 mr-1" /> Create Sprint</Button>
         </div>}
 
