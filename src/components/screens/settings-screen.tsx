@@ -42,6 +42,14 @@ export function SettingsScreen() {
     e.target.value = ''
   }
 
+  async function clearActivityData() {
+    if (!window.confirm('Clear all logs, goals, Sprints, sessions, reviews, and rivals? Your departments stay.')) return
+    if (!window.confirm('A backup was exported. This cannot be undone from the app. Clear activity data now?')) return
+    const response = await fetch('/api/workspace/clear', { method: 'POST' })
+    if (!response.ok) { toast.error('Could not clear activity data'); return }
+    window.location.reload()
+  }
+
   return (
     <div className="space-y-6 pb-20 max-w-2xl">
       <h1 className="font-serif text-2xl">Settings</h1>
@@ -175,6 +183,18 @@ export function SettingsScreen() {
             </Button>
             <input ref={fileRef} type="file" accept="application/json,.json" className="hidden" onChange={importJSON} />
           </div>
+        </CardContent>
+      </Card>
+
+      <Card className="border-destructive/30">
+        <CardHeader>
+          <CardTitle className="text-sm">Clear activity data</CardTitle>
+          <CardDescription>Removes logs, goals, Sprints, sessions, reviews, and rivals. Departments and categories remain.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button variant="outline" className="text-destructive hover:text-destructive" onClick={clearActivityData}>
+            <Trash2 className="h-4 w-4 mr-1.5" /> Clear activity data
+          </Button>
         </CardContent>
       </Card>
 
