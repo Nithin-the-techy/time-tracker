@@ -1,0 +1,143 @@
+// Single-user time tracker. SQLite locally; swap provider for hosted deploys (see VERCEL.md).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Department {
+  id        String @id @default(cuid())
+  name      String @unique
+  slug      String @unique
+  sortOrder Int
+  // UI hint only — never gates editing.
+  subType   String @default("freeform") // 'fixed' | 'freeform'
+
+  subdepartments Subdepartment[]
+  entries        Entry[]
+}
+
+model Subdepartment {
+  id           String  @id @default(cuid())
+  departmentId String
+  name         String
+  isActive     Boolean @default(true)
+  sortOrder    Int
+  // GPP multiplier. Default 1.0, editable in Settings (0.1–5.0), changes audited.
+  valueWeight  Float   @default(1.0)
+
+  department Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  entries    Entry[]
+  weightChanges WeightChange[]
+  rivalEstimates RivalSectorEstimate[]
+
+  @@unique([departmentId, name])
+}
+
+model Entry {
+  id              String   @id @default(cuid())
+  departmentId    String
+  subdepartmentId String
+  entryTimestamp  DateTime
+  durationMinutes Int
+  note            String?
+  obsidianRef     String?
+  createdAt       DateTime @default(now())
+
+  department    Department    @relation(fields: [departmentId], references: [id])
+  subdepartment Subdepartment @relation(fields: [subdepartmentId], references: [id], onDelete: Cascade)
+
+  @@index([entryTimestamp])
+  @@index([departmentId])
+}
+
+model WeeklyReview {
+  id            String   @id @default(cuid())
+  weekStartDate DateTime
+  whatMattered  String?
+  bottleneck    String?
+  nextChange    String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([weekStartDate])
+}
+
+model WeightChange {
+  id              String   @id @default(cuid())
+  subdepartmentId String
+  oldWeight       Float
+  newWeight       Float
+  changedAt       DateTime @default(now())
+
+  subdepartment Subdepartment @relation(fields: [subdepartmentId], references: [id], onDelete: Cascade)
+
+  @@index([changedAt])
+}
+
+model Rival {
+  id          String  @id @default(cuid())
+  name        String
+  regionLabel String
+  notes       String?
+
+  sectorEstimates RivalSectorEstimate[]
+}
+
+model RivalSectorEstimate {
+  id                     String @id @default(cuid())
+  rivalId                String
+  subdepartmentId        String
+  estimatedWeeklyMinutes Int
+
+  rival        Rival        @relation(fields: [rivalId], references: [id], onDelete: Cascade)
+  subdepartment Subdepartment @relation(fields: [subdepartmentId], references: [id])
+
+  @@unique([rivalId, subdepartmentId])
+}
+
+// Optional log of unproductive time (gaming, scrolling, idle...).
+// Display-only — it is carved out of the derived unproductive remainder,
+// never changes any total.
+// @@map keeps the original table name, so existing data survives the rename.
+model UnproductiveBlock {
+  id        String   @id @default(cuid())
+  date      String   // YYYY-MM-DD
+  tag       String   // activity label (free-form, suggestions in the log form)
+  minutes   Int
+  note      String?
+  createdAt DateTime @default(now())
+
+  @@index([date])
+  @@map("UnclaimedBlock")
+}
+
+// Logged neutral time other than sleep-department entries: meals, hygiene,
+// chores, commute, rest... Days with no neutral logs keep using the default
+// baseline (90m) — logging replaces the assumption with reality.
+model NeutralEntry {
+  id        String   @id @default(cuid())
+  date      String   // YYYY-MM-DD
+  activity  String   // 'sleep' | free-form label (meals, hygiene...)
+  minutes   Int
+  note      String?
+  createdAt DateTime @default(now())
+
+  @@index([date])
+}
+
+// Per-day overrides for the neutral baseline. Sleep normally comes from the
+// logged Sleep entry (else 8h); meals/eat-bathe is normally a flat 90m.
+// Either can be pinned to a different value for one specific day.
+model DayAllowance {
+  id             String   @id @default(cuid())
+  date           String   @unique // YYYY-MM-DD
+  sleepMinutes   Int? // null = use default behavior
+  neutralMinutes Int? // null = use default behavior
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
