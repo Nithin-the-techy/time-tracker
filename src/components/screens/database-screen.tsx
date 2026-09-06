@@ -6,7 +6,7 @@
 
 import { useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { useEntriesInRange, useDepartments, useAllowances } from '@/lib/hooks'
+import { useEntriesInRange, useDepartments, useAllowances, useNeutralEntries, useUnproductiveBlocks } from '@/lib/hooks'
 import {
   rangeMetrics,
   bucketSeries,
@@ -45,6 +45,8 @@ export function DatabaseScreen() {
   const openDeptPage = useUIStore((s) => s.openDeptPage)
 
   const { allowances } = useAllowances()
+  const { neutralEntries } = useNeutralEntries()
+  const { blocks } = useUnproductiveBlocks()
   const allow = useMemo(() => allowanceMap(allowances), [allowances])
 
   // Browse range
@@ -53,7 +55,7 @@ export function DatabaseScreen() {
     ? browseEntriesAll.filter((e) => e.departmentId === browseDeptFilter)
     : browseEntriesAll
 
-  const range = rangeMetrics(browseEntriesAll as unknown as EntryWithSub[], browseFrom, browseTo, allow)
+  const range = rangeMetrics(browseEntriesAll as unknown as EntryWithSub[], browseFrom, browseTo, allow, neutralEntries, blocks)
 
   const buckets = useMemo(
     () => bucketsForRange(
@@ -66,8 +68,8 @@ export function DatabaseScreen() {
 
   // Chart uses the dept-filtered entries so the graph matches the filter.
   const chartData = useMemo(
-    () => bucketSeries(browseEntries as unknown as EntryWithSub[], buckets, allow),
-    [browseEntries, buckets, allow],
+    () => bucketSeries(browseEntries as unknown as EntryWithSub[], buckets, allow, neutralEntries, blocks),
+    [browseEntries, buckets, allow, neutralEntries, blocks],
   )
 
   // Full history for last-active + total hours per department.

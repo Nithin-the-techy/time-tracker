@@ -5,8 +5,9 @@
 //   Neutral       — sleep (Health → Sleep entries + sleep neutral logs) plus
 //                   other neutral logs (meals/hygiene/chores...) or the
 //                   per-day pin from Settings
-//   Unproductive  — what's left: 1440 − Neutral − Productive. Negative logs
-//                   (gaming, scrolling...) just LABEL part of this remainder.
+//   Negative      — explicitly logged harmful/avoidant time only.
+//   Unknown       — elapsed time not yet accounted for. Unknown is evidence
+//                   quality, never moral failure.
 //
 // NOTHING is assumed. A day with no logs is not a bad day — it is no data:
 // zero sleep, zero neutral, zero unproductive, invisible to every chart.
@@ -72,6 +73,7 @@ export interface DayMetrics {
   available: number // 1440 − sleep − meals (logged days only)
   gpp: number
   unproductive: number
+  unknown: number
   productivePercent: number | null // null if available ≤ 0
 }
 
@@ -82,6 +84,7 @@ export interface RangeMetrics {
   available: number
   gpp: number
   unproductive: number
+  unknown: number
   productivePercent: number | null
   totalDays: number
   activeDays: number // days with at least one non-sleep entry
@@ -117,6 +120,7 @@ export interface BucketDatum {
   endKey: string
   productive: number
   unproductive: number
+  unknown: number
   neutral: number
   hasEntries: boolean
   productivePercent: number | null
@@ -161,6 +165,8 @@ export function dayMetrics(
   dateKey: string,
   allowances?: AllowanceMap,
   neutralEntries: NeutralEntryLike[] = [],
+  negativeBlocks: NegativeBlockLike[] = [],
+  now: Date = new Date(),
 ): DayMetrics {
   const dayEntries = entries.filter((e) => entryDateKey(e) === dateKey)
   const override = allowances?.get(dateKey)
@@ -176,7 +182,10 @@ export function dayMetrics(
 
   // A day exists to the app only if something was actually logged on it —
   // any department entry, any neutral log, or a pinned sleep/neutral value.
-  const active = dayEntries.length > 0 || loggedSleep > 0 || loggedOther > 0 || override != null
+  const explicitNegative = negativeBlocks
+    .filter((block) => block.date === dateKey)
+    .reduce((sum, block) => sum + block.minutes, 0)
+  const active = dayEntries.length > 0 || loggedSleep > 0 || loggedOther > 0 || explicitNegative > 0 || override != null
 
   if (!active) {
     return {
@@ -189,12 +198,19 @@ export function dayMetrics(
       available: 0,
       gpp: 0,
       unproductive: 0,
+      unknown: 0,
       productivePercent: null,
     }
   }
 
   const neutral = sleepMinutes + mealsMinutes
-  const available = Math.max(0, 1440 - neutral)
+  const todayKey = toDateKeyLocal(now)
+  const observedMinutes = dateKey < todayKey
+    ? 1440
+    : dateKey === todayKey
+      ? now.getHours() * 60 + now.getMinutes()
+      : 0
+  const available = Math.max(0, observedMinutes - neutral)
 
   let productive = 0
   for (const e of dayEntries) {
@@ -202,7 +218,8 @@ export function dayMetrics(
     productive += e.durationMinutes
   }
 
-  const unproductive = Math.max(0, available - productive)
+  const unproductive = explicitNegative
+  const unknown = Math.max(0, observedMinutes - neutral - productive - explicitNegative)
   const productivePercent = available > 0 ? (productive / available) * 100 : null
 
   return {
@@ -215,16 +232,19 @@ export function dayMetrics(
     available,
     gpp: productive,
     unproductive,
+    unknown,
     productivePercent,
   }
 }
 
-function eachDateKey(fromKey: string, toKey: string): string[] {
+export function dateKeysInRange(fromKey: string, toKey: string): string[] {
   const keys: string[] = []
-  const cursor = new Date(fromKey + 'T00:00:00')
-  const end = new Date(toKey + 'T23:59:59')
-  while (cursor <= end) {
-    keys.push(entryDateKey({ entryTimestamp: cursor.toISOString() }))
+  const [fromYear, fromMonth, fromDay] = fromKey.split('-').map(Number)
+  const [toYear, toMonth, toDay] = toKey.split('-').map(Number)
+  const cursor = new Date(fromYear, fromMonth - 1, fromDay)
+  const end = new Date(toYear, toMonth - 1, toDay)
+  while (cursor.getTime() <= end.getTime()) {
+    keys.push(toDateKeyLocal(cursor))
     cursor.setDate(cursor.getDate() + 1)
   }
   return keys
@@ -236,27 +256,33 @@ export function rangeMetrics(
   endDateKey: string,
   allowances?: AllowanceMap,
   neutralEntries: NeutralEntryLike[] = [],
+  negativeBlocks: NegativeBlockLike[] = [],
+  now: Date = new Date(),
 ): RangeMetrics {
-  const days = eachDateKey(startDateKey, endDateKey)
+  const days = dateKeysInRange(startDateKey, endDateKey)
 
   let productive = 0
   let neutral = 0
   let sleepTotal = 0
   let availableSum = 0
   let activeDays = 0
+  let explicitNegative = 0
+  let unknown = 0
 
   for (const day of days) {
-    const m = dayMetrics(entries, day, allowances, neutralEntries)
+    const m = dayMetrics(entries, day, allowances, neutralEntries, negativeBlocks, now)
     if (!m.active) continue // unlogged days are no data, not a bad day
     productive += m.productive
     neutral += m.neutral
     sleepTotal += m.sleepMinutes
     availableSum += m.available
     activeDays += 1
+    explicitNegative += m.unproductive
+    unknown += m.unknown
   }
 
   const available = availableSum
-  const unproductive = Math.max(0, available - productive)
+  const unproductive = explicitNegative
   const productivePercent = available > 0 ? (productive / available) * 100 : null
 
   return {
@@ -266,6 +292,7 @@ export function rangeMetrics(
     available,
     gpp: productive,
     unproductive,
+    unknown,
     productivePercent,
     totalDays: days.length,
     activeDays,
@@ -279,25 +306,32 @@ export function bucketSeries(
   buckets: { label: string; startKey: string; endKey: string }[],
   allowances?: AllowanceMap,
   neutralEntries: NeutralEntryLike[] = [],
+  negativeBlocks: NegativeBlockLike[] = [],
+  now: Date = new Date(),
 ): BucketDatum[] {
   return buckets.map((b) => {
-    const days = eachDateKey(b.startKey, b.endKey)
+    const days = dateKeysInRange(b.startKey, b.endKey)
     let productive = 0
     let neutral = 0
     let availableSum = 0
     let hasEntries = false
+    let explicitNegative = 0
+    let unknown = 0
 
     for (const day of days) {
-      const m = dayMetrics(entries, day, allowances, neutralEntries)
+      const m = dayMetrics(entries, day, allowances, neutralEntries, negativeBlocks, now)
       if (!m.active) continue // only logged days render — bars fill up as you log
       productive += m.productive
       neutral += m.neutral
       availableSum += m.available
       if (m.productive > 0) hasEntries = true
+      if (m.unproductive > 0 || m.neutral > 0 || m.unknown > 0) hasEntries = true
+      explicitNegative += m.unproductive
+      unknown += m.unknown
     }
 
     const available = availableSum
-    const unproductive = Math.max(0, available - productive)
+    const unproductive = explicitNegative
     const productivePercent = available > 0 ? (productive / available) * 100 : null
 
     return {
@@ -306,6 +340,7 @@ export function bucketSeries(
       endKey: b.endKey,
       productive,
       unproductive,
+      unknown,
       neutral,
       hasEntries,
       productivePercent,
@@ -412,7 +447,7 @@ export function subdepartmentShares(
 
 export interface DayProjection {
   productive: number // projected end-of-day minutes
-  unproductive: number
+  unknown: number // unallocated by the current productive logging pace, not predicted moral failure
   elapsedShare: number // 0..1
 }
 
@@ -424,8 +459,8 @@ export function projectDay(m: DayMetrics, nowMinutes: number): DayProjection | n
   if (share < 0.05 || share > 0.95) return null
   if (m.productive <= 0) return null
   const productive = Math.min(m.available, m.productive / share)
-  const unproductive = Math.max(0, m.available - productive)
-  return { productive, unproductive, elapsedShare: share }
+  const unknown = Math.max(0, m.available - productive)
+  return { productive, unknown, elapsedShare: share }
 }
 
 // --- GPP: the one number, computed once, same everywhere ---
@@ -566,7 +601,7 @@ export function formatGoalPercent(p: number): string {
 //   negative    → tagged activities + Unaccounted (the derived remainder)
 // Slice minutes always sum to 24h × days — the honest "where did time go".
 
-export type SliceKind = 'productive' | 'neutral' | 'negative'
+export type SliceKind = 'productive' | 'neutral' | 'negative' | 'unknown'
 
 export interface CompositionSlice {
   key: string
@@ -596,8 +631,8 @@ export function compositionForRange(
   const windowEntries = entries.filter((e) => inRange(entryDateKey(e)))
   const windowNeutral = neutralEntries.filter((n) => inRange(n.date))
   const windowBlocks = blocks.filter((b) => inRange(b.date))
-  const days = eachDateKey(startDateKey, endDateKey)
-  const totals = rangeMetrics(entries, startDateKey, endDateKey, allowances, neutralEntries)
+  const days = dateKeysInRange(startDateKey, endDateKey)
+  const totals = rangeMetrics(entries, startDateKey, endDateKey, allowances, neutralEntries, blocks)
 
   const slices: CompositionSlice[] = []
   // Donut covers logged days only — unlogged days contribute nothing at all.
@@ -620,7 +655,7 @@ export function compositionForRange(
   let sleepTotal = 0
   let mealsTotal = 0
   for (const day of days) {
-    const m = dayMetrics(entries, day, allowances, neutralEntries)
+    const m = dayMetrics(entries, day, allowances, neutralEntries, blocks)
     if (!m.active) continue
     sleepTotal += m.sleepMinutes
     mealsTotal += m.mealsMinutes
@@ -683,14 +718,25 @@ export function compositionForRange(
     })
   slices.push(...tagRows)
 
-  const unaccounted = Math.max(0, totals.unproductive - taggedTotal)
-  if (unaccounted > 0) {
+  const unlabeledNegative = Math.max(0, totals.unproductive - taggedTotal)
+  if (unlabeledNegative > 0) {
     slices.push({
       key: 'neg-unaccounted',
-      label: 'Unaccounted',
-      minutes: unaccounted,
+      label: 'Unlabelled negative',
+      minutes: unlabeledNegative,
       kind: 'negative',
       color: UNACCOUNTED_COLOR,
+      unaccounted: true,
+    })
+  }
+
+  if (totals.unknown > 0) {
+    slices.push({
+      key: 'unknown',
+      label: 'Unknown',
+      minutes: totals.unknown,
+      kind: 'unknown',
+      color: '#475569',
       unaccounted: true,
     })
   }

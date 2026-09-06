@@ -69,7 +69,7 @@ import { useUIStore, type ProgressMode } from '@/store/ui-store'
 const WINDOW_DAYS: Record<ProgressMode, number> = { dayweek: 7, month: 30, year: 365 }
 
 const GPP_TOOLTIP =
-  'GPP — Gross Personal Product, computed like nominal GDP: all productive time ever logged, averaged over every day tracked so far, extended to a month. The scale: $1T a month is 14 productive hours every single day — the physical ceiling of a top-performing human (7h sleep, 1.5h recovery, under 2h wasted). Your number is your honest fraction of that. One formula, one input (all your data) — the same number in every view.'
+  'Mythic scoreboard, not money or measured economic value. GPP maps logged productive time onto a trillion-dollar scale: all productive time averaged over tracked days and extended to a month. Use it as an identity metaphor; use Goals and Today to decide what actually matters.'
 
 export function ProgressScreen() {
   const now = new Date()
@@ -99,7 +99,7 @@ export function ProgressScreen() {
   const g = useMemo(() => gppStats(allEntries as unknown as EntryWithSub[], new Date()), [allEntries])
   const t30 = useMemo(() => trailingProductive(allEntries as unknown as EntryWithSub[], 30, new Date()), [allEntries])
 
-  const todayM = dayMetrics(todayEntries as unknown as EntryWithSub[], todayKey, allow, neutralEntries)
+  const todayM = dayMetrics(todayEntries as unknown as EntryWithSub[], todayKey, allow, neutralEntries, blocks)
   const m = useMemo(
     () =>
       compositionForRange(
@@ -123,8 +123,8 @@ export function ProgressScreen() {
   )
 
   const chartData = useMemo(
-    () => bucketSeries(winEntries as unknown as EntryWithSub[], buckets, allow, neutralEntries),
-    [winEntries, buckets, allow, neutralEntries],
+    () => bucketSeries(winEntries as unknown as EntryWithSub[], buckets, allow, neutralEntries, blocks),
+    [winEntries, buckets, allow, neutralEntries, blocks],
   )
 
   const todaySlices = useMemo(
@@ -170,7 +170,7 @@ export function ProgressScreen() {
       <div className="flex flex-wrap items-start justify-between gap-x-10 gap-y-6">
         <div>
           <p className="text-sm text-muted-foreground mb-1" title={GPP_TOOLTIP}>
-            GPP · gross personal product
+            Mythic scoreboard · GPP metaphor
           </p>
           <div className="flex items-baseline gap-3 flex-wrap">
             <h1 className="font-serif text-6xl tracking-tight tabular-nums text-[var(--growth)]">
@@ -232,7 +232,7 @@ export function ProgressScreen() {
                   <p className="text-[11px] text-muted-foreground mt-2 leading-relaxed">
                     pace{' '}
                     <span className="text-[var(--growth)] tabular-nums">
-                      (→ {formatHours(proj.productive)} productive · {formatHours(proj.unproductive)} unproductive)
+                      (→ {formatHours(proj.productive)} productive · {formatHours(proj.unknown)} unallocated)
                     </span>{' '}
                     by tonight
                   </p>

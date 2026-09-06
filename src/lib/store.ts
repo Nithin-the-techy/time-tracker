@@ -15,6 +15,7 @@ export interface Department {
   slug: string
   sortOrder: number
   subType: 'fixed' | 'freeform'
+  moduleKey: 'generic' | 'education' | 'research' | 'engineering' | 'revenue'
   subdepartments: Subdepartment[]
 }
 
@@ -34,6 +35,7 @@ export interface Entry {
     slug: string
     sortOrder: number
     subType: 'fixed' | 'freeform'
+    moduleKey: 'generic' | 'education' | 'research' | 'engineering' | 'revenue'
   }
   subdepartment: {
     id: string
@@ -103,6 +105,90 @@ export interface DayAllowance {
   neutralMinutes: number | null // null = default behavior
 }
 
+export type GoalStatus = 'draft' | 'active' | 'paused' | 'completed' | 'abandoned'
+export type ActionStatus = 'backlog' | 'today' | 'in_progress' | 'completed' | 'cancelled'
+
+export interface GoalTarget {
+  id: string
+  goalId: string
+  subdepartmentId: string | null
+  label: string
+  unit: string
+  targetValue: number
+  currentValue: number
+  progressSource: 'manual' | 'productive_minutes' | 'completed_actions' | 'outputs'
+  weight: number
+  sortOrder: number
+  subdepartment: Subdepartment | null
+}
+
+export interface GoalProblem {
+  id: string
+  goalId: string
+  targetId: string | null
+  statement: string
+  evidence: string | null
+  severity: number
+  status: 'open' | 'solved' | 'accepted'
+  createdAt: string
+  updatedAt: string
+}
+
+export interface FocusSession {
+  id: string
+  actionId: string
+  entryId: string | null
+  startedAt: string
+  endedAt: string | null
+  status: 'running' | 'completed' | 'interrupted' | 'abandoned'
+  actualMinutes: number | null
+  output: string | null
+  friction: string | null
+}
+
+export interface GoalAction {
+  id: string
+  goalId: string
+  targetId: string | null
+  problemId: string | null
+  subdepartmentId: string | null
+  title: string
+  context: string
+  plannedMinutes: number
+  dueDate: string | null
+  status: ActionStatus
+  todayOrder: number | null
+  definitionOfDone: string | null
+  output: string | null
+  createdAt: string
+  updatedAt: string
+  target: GoalTarget | null
+  problem: GoalProblem | null
+  subdepartment: Subdepartment | null
+  sessions: FocusSession[]
+}
+
+export interface Goal {
+  id: string
+  departmentId: string
+  title: string
+  outcome: string
+  whyNow: string | null
+  constraints: string | null
+  moduleKey: Department['moduleKey']
+  status: GoalStatus
+  priority: number
+  startDate: string
+  targetDate: string
+  reviewCadence: string
+  createdAt: string
+  updatedAt: string
+  department: Department
+  targets: GoalTarget[]
+  problems: GoalProblem[]
+  actions: GoalAction[]
+}
+
 export interface AppState {
   departments: Department[]
   entries: Entry[]
@@ -112,6 +198,7 @@ export interface AppState {
   unproductiveBlocks: UnproductiveBlock[]
   neutralEntries: NeutralEntry[]
   allowances: DayAllowance[]
+  goals: Goal[]
 }
 
 // --- Cache + subscription ---
@@ -169,6 +256,19 @@ async function putJson(url: string, body?: unknown) {
   return res.json()
 }
 
+async function deleteJson(url: string, body?: unknown) {
+  const res = await fetch(url, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+  })
+  if (!res.ok) {
+    const e = await res.json().catch(() => ({}))
+    throw new Error((e as { error?: string }).error || `DELETE ${url} failed: ${res.status}`)
+  }
+  return res.json()
+}
+
 // Full-range keys — data is tiny (a few MB at years of use), so we cache all
 // entries and filter client-side.
 const ALL_FROM = '2000-01-01'
@@ -182,7 +282,7 @@ export const store = {
     if (inflight.bootstrap !== undefined) return inflight.bootstrap as Promise<void>
     inflight.bootstrap = (async () => {
       try {
-        const [deptRes, rivalsRes, weightsRes, entriesRes, allowancesRes, blocksRes, neutralRes] = await Promise.all([
+        const [deptRes, rivalsRes, weightsRes, entriesRes, allowancesRes, blocksRes, neutralRes, goalsRes] = await Promise.all([
           getJson('/api/departments'),
           getJson('/api/rivals'),
           getJson('/api/weights'),
@@ -190,6 +290,7 @@ export const store = {
           getJson('/api/allowances'),
           getJson(`/api/unproductive-blocks?from=${ALL_FROM}&to=${ALL_TO}`),
           getJson(`/api/neutral-entries?from=${ALL_FROM}&to=${ALL_TO}`),
+          getJson('/api/goals'),
         ])
         cached = {
           ...cached,
@@ -200,6 +301,7 @@ export const store = {
           allowances: allowancesRes.allowances as DayAllowance[],
           unproductiveBlocks: blocksRes.blocks as UnproductiveBlock[],
           neutralEntries: neutralRes.entries as NeutralEntry[],
+          goals: goalsRes.goals as Goal[],
         }
         notify()
       } finally {
@@ -217,6 +319,16 @@ export const store = {
     const data = await getJson('/api/departments')
     cached.departments = data.departments as Department[]
     notify()
+  },
+
+  async addDepartment(name: string, moduleKey: Department['moduleKey']) {
+    await postJson('/api/departments', { name, moduleKey })
+    await this.loadDepartments()
+  },
+
+  async updateDepartment(id: string, input: { name?: string; moduleKey?: Department['moduleKey'] }) {
+    await patchJson('/api/departments', { id, ...input })
+    await this.loadDepartments()
   },
 
   // Range loads MERGE into the cache (never shrink it). Components request
@@ -254,7 +366,7 @@ export const store = {
   },
 
   async deleteEntry(id: string) {
-    await fetch(`/api/entries/${id}`, { method: 'DELETE' })
+    await deleteJson(`/api/entries/${id}`)
     cached.entries = (cached.entries ?? []).filter((e) => e.id !== id)
     notify()
   },
@@ -307,11 +419,11 @@ export const store = {
   },
 
   async deleteRival(id: string) {
-    await fetch(`/api/rivals/${id}`, { method: 'DELETE' })
+    await deleteJson(`/api/rivals/${id}`)
     await this.loadRivals()
   },
 
-  // --- Negative time blocks (label the derived unproductive remainder) ---
+  // --- Explicit negative time blocks ---
   async loadUnproductiveBlocks(from: string, to: string) {
     const data = await getJson(`/api/unproductive-blocks?from=${from}&to=${to}`)
     cached.unproductiveBlocks = data.blocks as UnproductiveBlock[]
@@ -324,7 +436,7 @@ export const store = {
   },
 
   async deleteUnproductiveBlock(id: string) {
-    await fetch(`/api/unproductive-blocks/${id}`, { method: 'DELETE' })
+    await deleteJson(`/api/unproductive-blocks/${id}`)
     cached.unproductiveBlocks = (cached.unproductiveBlocks ?? []).filter((b) => b.id !== id)
     notify()
   },
@@ -342,7 +454,7 @@ export const store = {
   },
 
   async deleteNeutralEntry(id: string) {
-    await fetch(`/api/neutral-entries/${id}`, { method: 'DELETE' })
+    await deleteJson(`/api/neutral-entries/${id}`)
     cached.neutralEntries = (cached.neutralEntries ?? []).filter((n) => n.id !== id)
     notify()
   },
@@ -356,13 +468,100 @@ export const store = {
   },
 
   async clearAllowance(date: string) {
-    await fetch('/api/allowances', {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ date }),
-    })
+    await deleteJson('/api/allowances', { date })
     cached.allowances = (cached.allowances ?? []).filter((a) => a.date !== date)
     notify()
+  },
+
+  // --- Goals, problems, actions, and intentional sessions ---
+  async loadGoals() {
+    const data = await getJson('/api/goals')
+    cached.goals = data.goals as Goal[]
+    notify()
+  },
+
+  async createGoal(input: {
+    departmentId: string
+    title: string
+    outcome: string
+    startDate: string
+    targetDate: string
+    priority?: number
+    whyNow?: string | null
+    constraints?: string | null
+  }) {
+    await postJson('/api/goals', input)
+    await this.loadGoals()
+  },
+
+  async createExamSprint(input: { startDate: string; targetDate: string }) {
+    await postJson('/api/goals', { template: 'exam-sprint', ...input })
+    await this.loadGoals()
+  },
+
+  async updateGoal(id: string, input: Partial<Pick<Goal, 'title' | 'outcome' | 'whyNow' | 'constraints' | 'priority' | 'status' | 'startDate' | 'targetDate'>>) {
+    await patchJson(`/api/goals/${id}`, input)
+    await this.loadGoals()
+  },
+
+  async addGoalTarget(input: {
+    goalId: string
+    subdepartmentId?: string | null
+    label: string
+    unit: string
+    targetValue: number
+    currentValue?: number
+    progressSource?: GoalTarget['progressSource']
+    weight?: number
+  }) {
+    await postJson('/api/goal-targets', input)
+    await this.loadGoals()
+  },
+
+  async updateGoalTarget(id: string, input: Partial<Pick<GoalTarget, 'label' | 'unit' | 'targetValue' | 'currentValue' | 'weight' | 'progressSource'>>) {
+    await patchJson('/api/goal-targets', { id, ...input })
+    await this.loadGoals()
+  },
+
+  async addGoalProblem(input: { goalId: string; targetId?: string | null; statement: string; evidence?: string | null; severity?: number }) {
+    await postJson('/api/goal-problems', input)
+    await this.loadGoals()
+  },
+
+  async updateGoalProblem(id: string, input: Partial<Pick<GoalProblem, 'statement' | 'evidence' | 'severity' | 'status'>>) {
+    await patchJson('/api/goal-problems', { id, ...input })
+    await this.loadGoals()
+  },
+
+  async addGoalAction(input: {
+    goalId: string
+    targetId?: string | null
+    problemId?: string | null
+    subdepartmentId?: string | null
+    title: string
+    context: string
+    plannedMinutes: number
+    dueDate?: string | null
+    status?: ActionStatus
+    definitionOfDone?: string | null
+  }) {
+    await postJson('/api/goal-actions', input)
+    await this.loadGoals()
+  },
+
+  async updateGoalAction(id: string, input: Partial<Pick<GoalAction, 'title' | 'context' | 'plannedMinutes' | 'status' | 'definitionOfDone' | 'output'>>) {
+    await patchJson('/api/goal-actions', { id, ...input })
+    await this.loadGoals()
+  },
+
+  async startFocusSession(actionId: string) {
+    await postJson('/api/focus-sessions', { operation: 'start', actionId })
+    await this.loadGoals()
+  },
+
+  async finishFocusSession(input: { sessionId: string; actualMinutes: number; output?: string | null; friction?: string | null; outcome: FocusSession['status'] }) {
+    await postJson('/api/focus-sessions', { operation: 'finish', ...input })
+    await Promise.all([this.loadGoals(), this.loadEntries(ALL_FROM, ALL_TO)])
   },
 
   // --- Backup ---
@@ -384,6 +583,6 @@ export const store = {
 
   async logout() {
     await postJson('/api/auth/logout', {})
-    window.location.href = '/login'
+    window.location.replace('/login')
   },
 }

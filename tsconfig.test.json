@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "outDir": ".test-dist",
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "target": "ES2022",
+    "isolatedModules": false,
+    "incremental": false,
+    "types": ["bun-types"]
+  },
+  "include": ["tests/**/*.ts", "src/lib/metrics.ts", "src/lib/constants.ts", "src/lib/store.ts"]
+}

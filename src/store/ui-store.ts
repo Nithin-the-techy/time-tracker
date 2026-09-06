@@ -9,7 +9,7 @@ import {
 // progress — combined day + week view, month/year modes, standings
 // database — departments and raw range browsing (no motivation, just data)
 // settings — weights, rivals, backups
-export type ScreenTab = 'progress' | 'database' | 'settings'
+export type ScreenTab = 'today' | 'goals' | 'progress' | 'database' | 'settings'
 
 // Which window the Progress tab shows. 'dayweek' combines the current day
 // with the rolling last-7-days; month/year are rolling 30/365-day windows.
@@ -25,6 +25,10 @@ interface UIState {
   activeDeptSlug: string | null
   openDeptPage: (slug: string) => void
   closeDeptPage: () => void
+
+  activeGoalId: string | null
+  openGoal: (id: string) => void
+  closeGoal: () => void
 
   logModalOpen: boolean
   logModalPresetDept: string | null
@@ -68,8 +72,8 @@ function defaultGranForRange(from: string, to: string): Granularity {
 }
 
 export const useUIStore = create<UIState>((set) => ({
-  tab: 'progress',
-  setTab: (t) => set({ tab: t, activeDeptSlug: null }),
+  tab: 'today',
+  setTab: (t) => set({ tab: t, activeDeptSlug: null, activeGoalId: null }),
 
   progressMode: 'dayweek',
   setProgressMode: (m) => set({ progressMode: m }),
@@ -83,6 +87,10 @@ export const useUIStore = create<UIState>((set) => ({
     deptGranularity: 'day',
   }),
   closeDeptPage: () => set({ activeDeptSlug: null }),
+
+  activeGoalId: null,
+  openGoal: (id) => set({ tab: 'goals', activeGoalId: id }),
+  closeGoal: () => set({ activeGoalId: null }),
 
   logModalOpen: false,
   logModalPresetDept: null,

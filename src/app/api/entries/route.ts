@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { isDateKey, validMinutes, wouldExceedDay } from '@/lib/time-validation'
 
 // GET /api/entries?from=YYYY-MM-DD&to=YYYY-MM-DD
 export async function GET(req: NextRequest) {
@@ -40,6 +41,7 @@ export async function GET(req: NextRequest) {
         slug: e.department.slug,
         sortOrder: e.department.sortOrder,
         subType: e.department.subType,
+        moduleKey: e.department.moduleKey,
       },
       subdepartment: {
         id: e.subdepartment.id,
@@ -55,12 +57,12 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}))
   const departmentId = String(body.departmentId ?? '')
-  const durationMinutes = Number(body.durationMinutes ?? 0)
+  const durationMinutes = validMinutes(body.durationMinutes, 720)
   const note = body.note ? String(body.note).slice(0, 2000) : null
   const obsidianRef = body.obsidianRef ? String(body.obsidianRef).slice(0, 500) : null
 
-  if (!departmentId || !durationMinutes || durationMinutes <= 0) {
-    return NextResponse.json({ error: 'departmentId and durationMinutes required' }, { status: 400 })
+  if (!departmentId || durationMinutes === null) {
+    return NextResponse.json({ error: 'departmentId and durationMinutes (1–720) required' }, { status: 400 })
   }
 
   const dept = await db.department.findUnique({ where: { id: departmentId } })
@@ -99,9 +101,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'subdepartmentId or subdepartmentName required' }, { status: 400 })
   }
 
+  const sub = await db.subdepartment.findFirst({ where: { id: subdepartmentId, departmentId } })
+  if (!sub) return NextResponse.json({ error: 'subdepartment does not belong to department' }, { status: 400 })
+
   const ts = new Date(body.entryTimestamp)
   if (isNaN(ts.getTime())) {
     return NextResponse.json({ error: 'invalid entryTimestamp' }, { status: 400 })
+  }
+  const dateKey = String(body.entryTimestamp ?? '').slice(0, 10)
+  if (!isDateKey(dateKey)) return NextResponse.json({ error: 'timestamp must start with a valid YYYY-MM-DD date' }, { status: 400 })
+  if (await wouldExceedDay(dateKey, durationMinutes)) {
+    return NextResponse.json({ error: 'This log would put the day above 24 hours' }, { status: 409 })
   }
 
   const entry = await db.entry.create({
@@ -109,7 +119,7 @@ export async function POST(req: NextRequest) {
       departmentId,
       subdepartmentId,
       entryTimestamp: ts,
-      durationMinutes: Math.round(durationMinutes),
+      durationMinutes,
       note,
       obsidianRef,
     },
@@ -132,6 +142,7 @@ export async function POST(req: NextRequest) {
         slug: entry.department.slug,
         sortOrder: entry.department.sortOrder,
         subType: entry.department.subType,
+        moduleKey: entry.department.moduleKey,
       },
       subdepartment: {
         id: entry.subdepartment.id,

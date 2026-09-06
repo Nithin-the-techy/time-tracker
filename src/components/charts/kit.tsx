@@ -10,6 +10,7 @@ export const CHART_COLORS = {
   productive: 'var(--growth)',
   neutral: 'var(--neutral-layer)',
   unproductive: 'var(--depreciation)',
+  unknown: '#475569',
   rival: 'oklch(0.55 0.01 60 / 45%)',
 } as const
 

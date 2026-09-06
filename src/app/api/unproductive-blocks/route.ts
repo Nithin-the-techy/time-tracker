@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { isDateKey, validMinutes, wouldExceedDay } from '@/lib/time-validation'
 
 // GET /api/unproductive-blocks?from=YYYY-MM-DD&to=YYYY-MM-DD
 export async function GET(req: NextRequest) {
@@ -29,16 +30,17 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}))
   const date = String(body.date ?? '')
   const tag = String(body.tag ?? '').trim().slice(0, 40)
-  const minutes = Math.max(1, Math.round(Number(body.minutes ?? 0)))
+  const minutes = validMinutes(body.minutes, 1440)
   const note = body.note ? String(body.note).slice(0, 1000) : null
 
-  if (!date || !tag || !minutes) {
+  if (!date || !tag || minutes === null) {
     return NextResponse.json({ error: 'date, tag, minutes required' }, { status: 400 })
   }
   // Free-form activity label — the log form suggests chips, anything goes.
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+  if (!isDateKey(date)) {
     return NextResponse.json({ error: 'invalid date' }, { status: 400 })
   }
+  if (await wouldExceedDay(date, minutes)) return NextResponse.json({ error: 'This log would put the day above 24 hours' }, { status: 409 })
 
   const block = await db.unproductiveBlock.create({
     data: { date, tag, minutes, note },

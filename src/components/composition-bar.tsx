@@ -10,17 +10,19 @@ export interface Composition {
   productive: number
   neutral: number
   unproductive: number
+  unknown: number
   productivePercent: number | null
 }
 
 const LAYERS = [
   { key: 'productive', label: 'Productive', color: CHART_COLORS.productive },
   { key: 'neutral', label: 'Neutral', color: CHART_COLORS.neutral },
-  { key: 'unproductive', label: 'Unproductive', color: CHART_COLORS.unproductive },
+  { key: 'unproductive', label: 'Explicit negative', color: CHART_COLORS.unproductive },
+  { key: 'unknown', label: 'Unknown', color: CHART_COLORS.unknown },
 ] as const
 
 export function CompositionBar({ data }: { data: Composition }) {
-  const total = data.productive + data.neutral + data.unproductive
+  const total = data.productive + data.neutral + data.unproductive + data.unknown
 
   // Blank state: nothing logged in the range → an empty track and a plain
   // "no data" line. Never a full-red bar implying a wasted day.

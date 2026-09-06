@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useRef } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -10,6 +10,7 @@ import { useDepartments, useRivals, store } from '@/lib/hooks'
 import { DEPARTMENT_COLORS } from '@/lib/constants'
 import { NeutralBaselineManager } from '@/components/neutral-baseline-manager'
 import { toast } from 'sonner'
+import { DEPARTMENT_MODULES, type DepartmentModuleKey } from '@/lib/department-modules'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -45,13 +46,15 @@ export function SettingsScreen() {
     <div className="space-y-6 pb-20 max-w-2xl">
       <h1 className="font-serif text-2xl">Settings</h1>
 
+      <DepartmentModulesCard departments={departments} />
+
       {/* Sleep & neutral baseline */}
       <Card>
         <CardHeader>
           <CardTitle className="text-sm">Sleep &amp; neutral baseline</CardTitle>
           <CardDescription>
-            Neutral = sleep + everything else that isn&apos;t work or waste. Change what a specific
-            day assumed; every total, chart and projection follows.
+            Neutral = sleep + everything else that isn&apos;t work or waste. Correct a specific day
+            without inventing defaults; every total and chart follows.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -191,6 +194,53 @@ export function SettingsScreen() {
   )
 }
 
+function DepartmentModulesCard({ departments }: { departments: ReturnType<typeof useDepartments>['departments'] }) {
+  const [name, setName] = useState('')
+  const [moduleKey, setModuleKey] = useState<DepartmentModuleKey>('generic')
+  const [busy, setBusy] = useState(false)
+  const moduleOptions = Object.values(DEPARTMENT_MODULES)
+
+  async function add() {
+    if (!name.trim()) return
+    setBusy(true)
+    try {
+      await store.addDepartment(name.trim(), moduleKey)
+      setName('')
+      toast.success('Department created')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not create department')
+    } finally { setBusy(false) }
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-sm">Department operating modules</CardTitle>
+        <CardDescription>Departments remain customizable containers. A module adds domain-specific language and workflow without splitting the goal system.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {departments.map((department) => (
+          <div key={department.id} className="grid grid-cols-[1fr_150px] gap-2 items-center">
+            <span className="text-sm truncate">{department.name.replace('Department of ', '')}</span>
+            <select
+              value={department.moduleKey ?? 'generic'}
+              onChange={(e) => store.updateDepartment(department.id, { moduleKey: e.target.value as DepartmentModuleKey }).catch((error) => toast.error(error.message))}
+              className="h-9 rounded-md border border-input bg-background px-2 text-xs"
+            >
+              {moduleOptions.map((module) => <option key={module.key} value={module.key}>{module.label}</option>)}
+            </select>
+          </div>
+        ))}
+        <div className="grid sm:grid-cols-[1fr_150px_auto] gap-2 pt-3 border-t border-border">
+          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="New department" />
+          <select value={moduleKey} onChange={(e) => setModuleKey(e.target.value as DepartmentModuleKey)} className="h-10 rounded-md border border-input bg-background px-2 text-sm">{moduleOptions.map((module) => <option key={module.key} value={module.key}>{module.label}</option>)}</select>
+          <Button onClick={add} disabled={busy || !name.trim()}><Plus className="h-4 w-4" /></Button>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
 function SubWeightRow({ subdepartmentId, slug, name, currentWeight }: {
   subdepartmentId: string
   slug: string
@@ -200,8 +250,6 @@ function SubWeightRow({ subdepartmentId, slug, name, currentWeight }: {
   const [weight, setWeight] = useState(currentWeight)
   const [saving, setSaving] = useState(false)
   const dirty = Math.abs(weight - currentWeight) > 0.001
-
-  useEffect(() => { setWeight(currentWeight) }, [currentWeight])
 
   async function save() {
     setSaving(true)

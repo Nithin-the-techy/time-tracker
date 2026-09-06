@@ -534,14 +534,13 @@ export function LogForm({ presetDepartmentId, onSaved }: LogFormProps) {
       </Button>
       {kind === 'neutral' && (
         <p className="text-[11px] text-muted-foreground -mt-2">
-          Neutral logs replace that day&apos;s assumed baseline (8h sleep · 90m meals) with what you
-          actually did. Days without logs keep the default.
+          Neutral time is evidence, not an assumption. Unlogged minutes remain unknown.
         </p>
       )}
       {kind === 'negative' && (
         <p className="text-[11px] text-muted-foreground -mt-2">
-          Unproductive time is already derived — this just labels part of it so the charts can
-          show what it went to.
+          Negative time counts only when you explicitly log it. Unknown time is never silently
+          treated as failure.
         </p>
       )}
       {needsTarget && !selectedDept && !presetDepartmentId && (

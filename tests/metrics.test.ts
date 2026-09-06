@@ -1,0 +1,62 @@
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import { dateKeysInRange, dayMetrics, rangeMetrics, type EntryWithSub } from '../src/lib/metrics'
+
+function entry(date: string, minutes: number, sleep = false): EntryWithSub {
+  return {
+    id: `${date}-${minutes}-${sleep}`,
+    departmentId: sleep ? 'health' : 'education',
+    subdepartmentId: sleep ? 'sleep' : 'physics',
+    entryTimestamp: `${date}T08:00:00.000Z`,
+    durationMinutes: minutes,
+    note: null,
+    obsidianRef: null,
+    createdAt: `${date}T08:00:00.000Z`,
+    department: { id: sleep ? 'health' : 'education', name: sleep ? 'Health' : 'Education', slug: sleep ? 'health' : 'education', sortOrder: 1, subType: 'freeform', moduleKey: sleep ? 'generic' : 'education' },
+    subdepartment: { id: sleep ? 'sleep' : 'physics', name: sleep ? 'Sleep' : 'Physics', valueWeight: 1 },
+  }
+}
+
+test('current day counts elapsed time and separates unknown from negative', () => {
+  const now = new Date(2026, 8, 6, 12, 0, 0)
+  const metrics = dayMetrics(
+    [entry('2026-09-06', 480, true), entry('2026-09-06', 60)],
+    '2026-09-06',
+    undefined,
+    [],
+    [{ id: 'negative', date: '2026-09-06', tag: 'scrolling', minutes: 30, note: null }],
+    now,
+  )
+  assert.equal(metrics.available, 240)
+  assert.equal(metrics.productive, 60)
+  assert.equal(metrics.unproductive, 30)
+  assert.equal(metrics.unknown, 150)
+  assert.equal(metrics.productivePercent, 25)
+})
+
+test('a silent day is no data, not failure', () => {
+  const metrics = dayMetrics([], '2026-09-05', undefined, [], [], new Date(2026, 8, 6, 12))
+  assert.equal(metrics.active, false)
+  assert.equal(metrics.unproductive, 0)
+  assert.equal(metrics.unknown, 0)
+})
+
+test('calendar iteration preserves date keys without UTC round trips', () => {
+  assert.deepEqual(dateKeysInRange('2026-09-29', '2026-10-02'), ['2026-09-29', '2026-09-30', '2026-10-01', '2026-10-02'])
+})
+
+test('ranges sum explicit negative and unknown independently', () => {
+  const metrics = rangeMetrics(
+    [entry('2026-09-05', 120)],
+    '2026-09-05',
+    '2026-09-05',
+    undefined,
+    [],
+    [{ id: 'negative', date: '2026-09-05', tag: 'gaming', minutes: 60, note: null }],
+    new Date(2026, 8, 6, 12),
+  )
+  assert.equal(metrics.productive, 120)
+  assert.equal(metrics.unproductive, 60)
+  assert.equal(metrics.unknown, 1260)
+})
+

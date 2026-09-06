@@ -20,6 +20,7 @@ const KIND_HEADERS: Record<SliceKind, string> = {
   productive: 'Productive',
   neutral: 'Neutral',
   negative: 'Negative',
+  unknown: 'Unknown',
 }
 
 interface PieItem extends CompositionSlice {

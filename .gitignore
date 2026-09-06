@@ -12,6 +12,8 @@ node_modules
 
 # testing
 /coverage
+/.test-dist/
+db/custom.pre-goal-engine.db
 
 # next.js
 /.next/

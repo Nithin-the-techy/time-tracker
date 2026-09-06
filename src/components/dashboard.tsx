@@ -1,16 +1,20 @@
 'use client'
 
-import { LineChart, Database, Settings, LogIn } from 'lucide-react'
+import { Crosshair, LineChart, Database, Settings, LogIn, Target } from 'lucide-react'
 import { useUIStore, type ScreenTab } from '@/store/ui-store'
 import { ProgressScreen } from '@/components/screens/progress-screen'
 import { DatabaseScreen } from '@/components/screens/database-screen'
 import { DepartmentPage } from '@/components/screens/department-page'
 import { SettingsScreen } from '@/components/screens/settings-screen'
 import { LogModal } from '@/components/log-modal'
+import { TodayScreen } from '@/components/screens/today-screen'
+import { GoalsScreen } from '@/components/screens/goals-screen'
 
 const TABS: { id: ScreenTab; label: string; icon: React.ElementType }[] = [
-  { id: 'progress', label: 'Progress', icon: LineChart },
-  { id: 'database', label: 'Database', icon: Database },
+  { id: 'today', label: 'Today', icon: Crosshair },
+  { id: 'goals', label: 'Goals', icon: Target },
+  { id: 'progress', label: 'Score', icon: LineChart },
+  { id: 'database', label: 'Data', icon: Database },
   { id: 'settings', label: 'Settings', icon: Settings },
 ]
 
@@ -24,6 +28,8 @@ export function Dashboard() {
       <Header />
 
       <main className="flex-1 w-full max-w-5xl mx-auto px-4 py-5 pb-24">
+        {tab === 'today' && <TodayScreen />}
+        {tab === 'goals' && <GoalsScreen />}
         {tab === 'progress' && <ProgressScreen />}
         {tab === 'database' && activeDeptSlug && <DepartmentPage slug={activeDeptSlug} />}
         {tab === 'database' && !activeDeptSlug && <DatabaseScreen />}
@@ -33,7 +39,7 @@ export function Dashboard() {
       <LogFab />
 
       <nav className="sticky bottom-0 z-30 border-t border-border bg-background/95 backdrop-blur">
-        <div className="max-w-5xl mx-auto px-2 py-2 flex items-center justify-around">
+        <div className="max-w-5xl mx-auto px-1 py-2 grid grid-cols-5">
           {TABS.map((t) => (
             <TabButton
               key={t.id}
@@ -79,7 +85,7 @@ function Header() {
       <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
         <div className="flex items-baseline gap-2">
           <span className="font-serif text-lg tracking-tight">Operations</span>
-          <span className="text-muted-foreground text-xs hidden sm:inline">time tracker</span>
+          <span className="text-muted-foreground text-xs hidden sm:inline">execution system</span>
         </div>
       </div>
     </header>
@@ -102,7 +108,7 @@ function TabButton({
     <button
       type="button"
       onClick={onClick}
-      className={`flex flex-col items-center justify-center gap-0.5 px-6 py-1.5 rounded-md min-w-[96px] transition ${
+      className={`flex flex-col items-center justify-center gap-0.5 px-1 py-1.5 rounded-md min-w-0 transition ${
         active ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
       }`}
     >

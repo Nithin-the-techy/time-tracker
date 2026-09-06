@@ -7,6 +7,7 @@ export interface DepartmentSeed {
   name: string
   sortOrder: number
   subType: SubType
+  moduleKey: 'generic' | 'education' | 'research' | 'engineering' | 'revenue'
   subdepartments: string[] // starter names, in display order
 }
 
@@ -16,6 +17,7 @@ export const DEPARTMENTS: DepartmentSeed[] = [
     name: 'Department of Finance',
     sortOrder: 1,
     subType: 'freeform',
+    moduleKey: 'revenue',
     subdepartments: ['Tutoring', 'Web Dev Sales', 'Savings/Budgeting'],
   },
   {
@@ -23,6 +25,7 @@ export const DEPARTMENTS: DepartmentSeed[] = [
     name: 'Department of Education',
     sortOrder: 2,
     subType: 'freeform',
+    moduleKey: 'education',
     subdepartments: [
       'Physics',
       'Math',
@@ -39,6 +42,7 @@ export const DEPARTMENTS: DepartmentSeed[] = [
     name: 'Department of Health',
     sortOrder: 3,
     subType: 'freeform',
+    moduleKey: 'generic',
     // Sleep is logged here and used as the daily baseline (defaults to 480 if unlogged).
     subdepartments: ['Sleep', 'Nutrition', 'Exercise'],
   },
@@ -47,6 +51,7 @@ export const DEPARTMENTS: DepartmentSeed[] = [
     name: 'Department of Research',
     sortOrder: 4,
     subType: 'freeform',
+    moduleKey: 'research',
     subdepartments: [
       'AI/ML Theory',
       'Neuroscience-Inspired Computing',
@@ -58,6 +63,7 @@ export const DEPARTMENTS: DepartmentSeed[] = [
     name: 'Department of Engineering',
     sortOrder: 5,
     subType: 'freeform',
+    moduleKey: 'engineering',
     subdepartments: [],
   },
   {
@@ -65,6 +71,7 @@ export const DEPARTMENTS: DepartmentSeed[] = [
     name: 'Department of Relations',
     sortOrder: 6,
     subType: 'freeform',
+    moduleKey: 'generic',
     subdepartments: ['Family', 'Friends', 'New Connections'],
   },
   {
@@ -72,6 +79,7 @@ export const DEPARTMENTS: DepartmentSeed[] = [
     name: 'Department of Infrastructure and Strategic Operations',
     sortOrder: 7,
     subType: 'freeform',
+    moduleKey: 'generic',
     subdepartments: ['Tools & Workflow', 'Environment', 'Weekly Review', 'Prioritization', 'Long-Term Planning'],
   },
   {
@@ -79,6 +87,7 @@ export const DEPARTMENTS: DepartmentSeed[] = [
     name: 'Department of Communications',
     sortOrder: 8,
     subType: 'freeform',
+    moduleKey: 'generic',
     subdepartments: ['Academic/Application Writing', 'General Writing', 'Verbal/Presentation'],
   },
   {
@@ -86,6 +95,7 @@ export const DEPARTMENTS: DepartmentSeed[] = [
     name: 'Department of Intelligence',
     sortOrder: 9,
     subType: 'freeform',
+    moduleKey: 'generic',
     // Domain-general cognitive training. Physical exercise stays in Health → Exercise.
     subdepartments: ['Chess & Strategy Games', 'Meditation & Mindfulness', 'Cognitive Cross-Training', 'Diet & Brain Health'],
   },

@@ -2,11 +2,9 @@
 
 // Per-day neutral baseline manager — lives in Settings.
 //
-// A day's neutral time = sleep + other neutral. By default:
-//   sleep  = logged Sleep (Health → Sleep or a neutral 'sleep' log), else 8h
-//   other  = logged neutral time (meals, chores...), else 90m
+// A day's neutral time = logged/pinned sleep + logged/pinned other neutral.
 // Either part can be PINNED to an explicit value for one specific date here.
-// Pins win over logs, logs win over defaults — and every chart, total and
+// Pins win over logs — and every chart, total and
 // projection reads the same numbers.
 
 import { useState } from 'react'
@@ -27,10 +25,8 @@ export function NeutralBaselineManager() {
   return (
     <div className="space-y-3">
       <p className="text-xs text-muted-foreground">
-        Defaults when nothing is logged: sleep <span className="text-foreground tabular-nums">8h</span> ·{' '}
-        other neutral <span className="text-foreground tabular-nums">90m</span>. Log neutral time
-        through the universal Log button (Sleep, Meals, Chores…) and the day uses your real numbers.
-        Pin an exact value below only when neither is right.
+        Nothing is assumed. Log Sleep, Meals, Chores, and other neutral time through the universal
+        Log button. Pin an exact value only to correct or close a specific day.
       </p>
 
       {sorted.length > 0 && (
@@ -52,14 +48,14 @@ export function NeutralBaselineManager() {
                 onClick={async () => {
                   try {
                     await store.clearAllowance(a.date)
-                    toast.success('Back to defaults')
+                    toast.success('Pin removed; logged data is authoritative again')
                   } catch (e) {
                     toast.error((e as Error).message)
                   }
                 }}
                 className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-[var(--depreciation)] transition p-1 -m-1"
                 aria-label={`Reset ${a.date}`}
-                title="Reset to default"
+                title="Remove pin"
               >
                 <RotateCcw className="h-3 w-3" />
               </button>
@@ -141,7 +137,7 @@ function AddAllowanceForm() {
             type="number"
             min={0}
             max={840}
-            placeholder="default"
+            placeholder="optional"
             value={sleep}
             onChange={(e) => setSleep(e.target.value)}
             className="h-9"
@@ -153,7 +149,7 @@ function AddAllowanceForm() {
             type="number"
             min={0}
             max={600}
-            placeholder="default"
+            placeholder="optional"
             value={neutral}
             onChange={(e) => setNeutral(e.target.value)}
             className="h-9"

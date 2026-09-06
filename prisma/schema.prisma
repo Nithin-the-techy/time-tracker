@@ -16,9 +16,11 @@ model Department {
   sortOrder Int
   // UI hint only — never gates editing.
   subType   String @default("freeform") // 'fixed' | 'freeform'
+  moduleKey String @default("generic") // generic | education | research | engineering | revenue
 
   subdepartments Subdepartment[]
   entries        Entry[]
+  goals          Goal[]
 }
 
 model Subdepartment {
@@ -30,10 +32,12 @@ model Subdepartment {
   // GPP multiplier. Default 1.0, editable in Settings (0.1–5.0), changes audited.
   valueWeight  Float   @default(1.0)
 
-  department Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
-  entries    Entry[]
-  weightChanges WeightChange[]
+  department     Department            @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  entries        Entry[]
+  weightChanges  WeightChange[]
   rivalEstimates RivalSectorEstimate[]
+  goalTargets    GoalTarget[]
+  goalActions    GoalAction[]
 
   @@unique([departmentId, name])
 }
@@ -50,9 +54,121 @@ model Entry {
 
   department    Department    @relation(fields: [departmentId], references: [id])
   subdepartment Subdepartment @relation(fields: [subdepartmentId], references: [id], onDelete: Cascade)
+  focusSession  FocusSession?
 
   @@index([entryTimestamp])
   @@index([departmentId])
+}
+
+// One universal execution model. Department modules only change presentation
+// and suggested workflows; they never create incompatible goal tables.
+model Goal {
+  id            String   @id @default(cuid())
+  departmentId  String
+  title         String
+  outcome       String
+  whyNow        String?
+  constraints   String?
+  moduleKey     String   @default("generic")
+  status        String   @default("active") // draft | active | paused | completed | abandoned
+  priority      Int      @default(3) // 1 is highest
+  startDate     String // YYYY-MM-DD
+  targetDate    String // YYYY-MM-DD
+  reviewCadence String   @default("weekly")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  department Department    @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  targets    GoalTarget[]
+  problems   GoalProblem[]
+  actions    GoalAction[]
+
+  @@index([status, priority])
+  @@index([departmentId])
+}
+
+model GoalTarget {
+  id              String  @id @default(cuid())
+  goalId          String
+  subdepartmentId String?
+  label           String
+  unit            String  @default("percent")
+  targetValue     Float
+  currentValue    Float   @default(0)
+  progressSource  String  @default("manual") // manual | productive_minutes | completed_actions | outputs
+  weight          Float   @default(1)
+  sortOrder       Int     @default(0)
+
+  goal          Goal           @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  problems      GoalProblem[]
+  actions       GoalAction[]
+  subdepartment Subdepartment? @relation(fields: [subdepartmentId], references: [id], onDelete: SetNull)
+
+  @@index([goalId, sortOrder])
+}
+
+model GoalProblem {
+  id        String   @id @default(cuid())
+  goalId    String
+  targetId  String?
+  statement String
+  evidence  String?
+  severity  Int      @default(3)
+  status    String   @default("open") // open | solved | accepted
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  goal    Goal         @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  target  GoalTarget?  @relation(fields: [targetId], references: [id], onDelete: SetNull)
+  actions GoalAction[]
+
+  @@index([goalId, status])
+}
+
+model GoalAction {
+  id               String   @id @default(cuid())
+  goalId           String
+  targetId         String?
+  problemId        String?
+  subdepartmentId  String?
+  title            String
+  context          String   @default("deep")
+  plannedMinutes   Int      @default(25)
+  dueDate          String?
+  status           String   @default("backlog") // backlog | today | in_progress | completed | cancelled
+  todayOrder       Int?
+  definitionOfDone String?
+  output           String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  goal          Goal           @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  target        GoalTarget?    @relation(fields: [targetId], references: [id], onDelete: SetNull)
+  problem       GoalProblem?   @relation(fields: [problemId], references: [id], onDelete: SetNull)
+  subdepartment Subdepartment? @relation(fields: [subdepartmentId], references: [id], onDelete: SetNull)
+  sessions      FocusSession[]
+
+  @@index([status, todayOrder])
+  @@index([goalId])
+}
+
+model FocusSession {
+  id            String    @id @default(cuid())
+  actionId      String
+  entryId       String?   @unique
+  startedAt     DateTime  @default(now())
+  endedAt       DateTime?
+  status        String    @default("running") // running | completed | interrupted | abandoned
+  actualMinutes Int?
+  output        String?
+  friction      String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  action GoalAction @relation(fields: [actionId], references: [id], onDelete: Cascade)
+  entry  Entry?     @relation(fields: [entryId], references: [id], onDelete: SetNull)
+
+  @@index([status, startedAt])
 }
 
 model WeeklyReview {
@@ -94,7 +210,7 @@ model RivalSectorEstimate {
   subdepartmentId        String
   estimatedWeeklyMinutes Int
 
-  rival        Rival        @relation(fields: [rivalId], references: [id], onDelete: Cascade)
+  rival         Rival         @relation(fields: [rivalId], references: [id], onDelete: Cascade)
   subdepartment Subdepartment @relation(fields: [subdepartmentId], references: [id])
 
   @@unique([rivalId, subdepartmentId])
@@ -106,8 +222,8 @@ model RivalSectorEstimate {
 // @@map keeps the original table name, so existing data survives the rename.
 model UnproductiveBlock {
   id        String   @id @default(cuid())
-  date      String   // YYYY-MM-DD
-  tag       String   // activity label (free-form, suggestions in the log form)
+  date      String // YYYY-MM-DD
+  tag       String // activity label (free-form, suggestions in the log form)
   minutes   Int
   note      String?
   createdAt DateTime @default(now())
@@ -121,8 +237,8 @@ model UnproductiveBlock {
 // baseline (90m) — logging replaces the assumption with reality.
 model NeutralEntry {
   id        String   @id @default(cuid())
-  date      String   // YYYY-MM-DD
-  activity  String   // 'sleep' | free-form label (meals, hygiene...)
+  date      String // YYYY-MM-DD
+  activity  String // 'sleep' | free-form label (meals, hygiene...)
   minutes   Int
   note      String?
   createdAt DateTime @default(now())
