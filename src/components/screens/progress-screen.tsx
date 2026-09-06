@@ -68,8 +68,7 @@ import { useUIStore, type ProgressMode } from '@/store/ui-store'
 
 const WINDOW_DAYS: Record<ProgressMode, number> = { dayweek: 7, month: 30, year: 365 }
 
-const GPP_TOOLTIP =
-  'GPP is a symbolic scoreboard, not money or measured economic value. Use Goals and the active work list to decide what matters.'
+const GPP_TOOLTIP = 'A symbolic score derived from productive time. It is not literal money.'
 
 export function ProgressScreen() {
   const now = new Date()
@@ -170,7 +169,7 @@ export function ProgressScreen() {
       <div className="flex flex-wrap items-start justify-between gap-x-10 gap-y-6">
         <div>
           <p className="text-sm text-muted-foreground mb-1" title={GPP_TOOLTIP}>
-            Mythic scoreboard · GPP metaphor
+            GPP / month
           </p>
           <div className="flex items-baseline gap-3 flex-wrap">
             <h1 className="font-serif text-6xl tracking-tight tabular-nums text-[var(--growth)]">
@@ -200,7 +199,7 @@ export function ProgressScreen() {
               {prettyDate(new Date(t30.toKey + 'T00:00:00'))}
             </p>
           ) : (
-            <p className="text-xs text-muted-foreground mt-1.5">log your first session to start the count</p>
+            <p className="text-xs text-muted-foreground mt-1.5">No productive time in this window</p>
           )}
         </div>
       </div>
@@ -238,9 +237,7 @@ export function ProgressScreen() {
                   </p>
                 ) : (
                   <p className="text-[11px] text-muted-foreground mt-2">
-                    {todayM.productive > 0
-                      ? `${formatPercent(todayM.productivePercent)} of open time so far`
-                      : 'nothing logged yet — the day fills in only as you log'}
+                    {todayM.productive > 0 ? `${formatPercent(todayM.productivePercent)} of open time so far` : 'No records today'}
                   </p>
                 )}
               </CardContent>
@@ -258,7 +255,7 @@ export function ProgressScreen() {
                   centerPrimary={formatPercent(totals.productivePercent)}
                   centerSecondary="productive"
                 />
-                <p className="text-[11px] text-muted-foreground mt-2 leading-relaxed">
+                  <p className="text-[11px] text-muted-foreground mt-2 leading-relaxed">
                   {formatHours(totals.productive)} productive · {formatHours(totals.neutral)} neutral ·{' '}
                   {formatHours(totals.unproductive)} unproductive
                 </p>
@@ -307,10 +304,7 @@ export function ProgressScreen() {
 
       {/* Standings — monthly GPP, same treatment for everyone */}
       <section>
-        <p className="text-sm text-muted-foreground mb-3">
-          Standings · monthly GPP at {formatMoney(GPP_DOLLARS_PER_HOUR)} per productive hour
-          <span className="text-muted-foreground/70"> · $1T = 14h/day, every day · rivals from weekly estimates</span>
-        </p>
+        <p className="text-sm text-muted-foreground mb-3">Standings · monthly GPP</p>
         <Card>
           <CardContent className="p-4">
             <StandingsChart data={standings} onManage={() => setTab('settings')} />
@@ -318,16 +312,6 @@ export function ProgressScreen() {
         </Card>
       </section>
 
-      <section className="border-t border-border pt-5 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <p className="text-sm font-medium">Work setup</p>
-          <p className="text-xs text-muted-foreground mt-1">Create work and phases from the Work tab.</p>
-        </div>
-        <div className="flex gap-2">
-          <button type="button" onClick={() => setTab('goals')} className="rounded-md border border-border px-3 py-2 text-sm hover:border-foreground/30 transition">Open Work</button>
-          <button type="button" onClick={() => setTab('goals')} className="rounded-md bg-primary px-3 py-2 text-sm text-primary-foreground hover:opacity-90 transition">Create goal</button>
-        </div>
-      </section>
     </div>
   )
 }

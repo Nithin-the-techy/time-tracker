@@ -1,8 +1,6 @@
 'use client'
 
-// Database tab — pure data organization: department index and range browsing.
-// No motivational elements here; the day/week live view is on the Progress tab,
-// and logging happens through the one universal + button.
+// History is the canonical ledger: filters first, records second, breakdowns last.
 
 import { useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -91,37 +89,13 @@ export function DatabaseScreen() {
     .sort((a, b) => b.minutes - a.minutes)
 
   return (
-    <div className="space-y-8">
-      {/* Departments */}
-      <section>
-        <div className="flex items-baseline justify-between mb-3">
-          <p className="text-sm text-muted-foreground">Departments</p>
-          <span className="text-xs text-muted-foreground">open for details</span>
-        </div>
-        {deptsWithStats.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-6">Loading departments…</p>
-        ) : (
-          <div className="border-t border-border">
-            {deptsWithStats.map((d) => (
-              <DepartmentRow
-                key={d.id}
-                slug={d.slug}
-                name={d.name}
-                minutes={d.minutes}
-                share={d.share}
-                daysActive={d.daysActive}
-                subCount={d.subdepartments.length}
-                lastActive={d.lastActive}
-                onClick={() => openDeptPage(d.slug)}
-              />
-            ))}
-          </div>
-        )}
-      </section>
+    <div className="space-y-6 max-w-5xl mx-auto">
+      <div>
+        <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Canonical ledger</p>
+        <h1 className="font-serif text-3xl mt-1">History</h1>
+      </div>
 
-      {/* Browse */}
       <section>
-        <p className="text-sm text-muted-foreground mb-3">Browse</p>
         <div className="space-y-3">
           <DateRangePicker
             fromKey={browseFrom}
@@ -134,32 +108,25 @@ export function DatabaseScreen() {
           </div>
           <DepartmentFilter value={browseDeptFilter} onChange={setBrowseDeptFilter} />
 
-          <Card>
-            <CardContent className="p-4">
-              <p className="text-xs text-muted-foreground mb-3">
-                Time composition · {range.productivePercent !== null ? `${Math.round(range.productivePercent)}% productive` : 'no data'}
-                <span className="text-muted-foreground/70"> · {formatHours(range.available)} open</span>
-              </p>
-              <CompositionBar data={range} />
-            </CardContent>
-          </Card>
+          {browseEntries.length === 0 ? <div className="border border-dashed border-border rounded-lg px-4 py-8 text-center text-sm text-muted-foreground">No records in this range.</div> : <>
+            <Card>
+              <CardContent className="p-4">
+                <p className="text-xs text-muted-foreground mb-3">
+                  {range.productivePercent !== null ? `${Math.round(range.productivePercent)}% productive` : 'No composition yet'}
+                  <span className="text-muted-foreground/70"> · {formatHours(range.available)} open</span>
+                </p>
+                <CompositionBar data={range} />
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm">
-                Hours by {GRAN_LABEL[browseGranularity]}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {range.productive === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-12">No entries in this range.</p>
-              ) : (
-                <HoursBarChart data={chartData} height={260} />
-              )}
-            </CardContent>
-          </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm">Hours by {GRAN_LABEL[browseGranularity]}</CardTitle>
+              </CardHeader>
+              <CardContent><HoursBarChart data={chartData} height={220} /></CardContent>
+            </Card>
 
-          <Card>
+            <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm">Logs in range</CardTitle>
             </CardHeader>
@@ -171,8 +138,17 @@ export function DatabaseScreen() {
                 granularity={browseGranularity}
               />
             </CardContent>
-          </Card>
+            </Card>
+          </>}
         </div>
+      </section>
+
+      <section>
+        <div className="flex items-baseline justify-between mb-3">
+          <p className="text-sm text-muted-foreground">By department</p>
+          <span className="text-xs text-muted-foreground">open for details</span>
+        </div>
+        {deptsWithStats.length > 0 && <div className="border-t border-border">{deptsWithStats.map((d) => <DepartmentRow key={d.id} slug={d.slug} name={d.name} minutes={d.minutes} share={d.share} daysActive={d.daysActive} subCount={d.subdepartments.length} lastActive={d.lastActive} onClick={() => openDeptPage(d.slug)} />)}</div>}
       </section>
     </div>
   )

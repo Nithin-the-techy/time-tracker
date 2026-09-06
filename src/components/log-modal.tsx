@@ -35,11 +35,8 @@ function LogFormInner({ presetDeptSlug, onSaved }: { presetDeptSlug: string | nu
   return (
     <>
       <DialogHeader>
-        <DialogTitle>Log time</DialogTitle>
-        <DialogDescription>
-          One form for everything — productive department work, neutral time (sleep, meals,
-          chores…), or negative time (gaming, scrolling…).
-        </DialogDescription>
+        <DialogTitle>Add record</DialogTitle>
+        <DialogDescription>Record productive, neutral, or negative time.</DialogDescription>
       </DialogHeader>
       <div className="pt-2">
         <LogForm presetDepartmentId={presetDept?.id} onSaved={onSaved} />

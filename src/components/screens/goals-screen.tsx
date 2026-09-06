@@ -30,9 +30,7 @@ export function GoalsScreen() {
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
       <div>
-        <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Plan and execute</p>
-        <h1 className="font-serif text-3xl mt-1">Work</h1>
-        <p className="text-sm text-muted-foreground mt-2">Set outcomes, phases, and the next actions that move them.</p>
+        <h1 className="font-serif text-3xl">Work</h1>
       </div>
 
       {goals.length > 0 && <TodayScreen />}
