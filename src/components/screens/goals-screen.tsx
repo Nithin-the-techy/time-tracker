@@ -35,7 +35,7 @@ export function GoalsScreen() {
         <p className="text-sm text-muted-foreground mt-2">Set outcomes, phases, and the next actions that move them.</p>
       </div>
 
-      <TodayScreen />
+      {goals.length > 0 && <TodayScreen />}
       <CreateGoalPanel departments={departments} />
       <SprintPanel />
 

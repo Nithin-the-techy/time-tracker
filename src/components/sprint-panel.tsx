@@ -52,7 +52,7 @@ export function SprintPanel() {
             </div>
             <p className="text-xs text-muted-foreground mt-3">{active.goals.length} goal{active.goals.length === 1 ? '' : 's'} connected</p>
           </div>
-        ) : !loading ? <p className="text-sm text-muted-foreground">No active Sprint. Create a phase for the work currently competing for your attention.</p> : null}
+        ) : !loading ? <p className="text-sm text-muted-foreground">No active Sprint.</p> : null}
 
         {open && <div className="border-t border-border pt-3 space-y-2">
           <div className="grid sm:grid-cols-2 gap-2"><div><Label className="text-[11px]">Name</Label><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Current execution phase" /></div><div><Label className="text-[11px]">Phase note (optional)</Label><Input value={phase} onChange={(e) => setPhase(e.target.value)} placeholder="What this phase is about" /></div></div>
