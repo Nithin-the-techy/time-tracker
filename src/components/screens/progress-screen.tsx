@@ -65,11 +65,12 @@ import { HoursBarChart } from '@/components/charts/hours-bar-chart'
 import { CompositionDonut } from '@/components/charts/composition-donut'
 import { StandingsChart, type Standing } from '@/components/charts/standings-chart'
 import { useUIStore, type ProgressMode } from '@/store/ui-store'
+import { TodayScreen } from '@/components/screens/today-screen'
 
 const WINDOW_DAYS: Record<ProgressMode, number> = { dayweek: 7, month: 30, year: 365 }
 
 const GPP_TOOLTIP =
-  'Mythic scoreboard, not money or measured economic value. GPP maps logged productive time onto a trillion-dollar scale: all productive time averaged over tracked days and extended to a month. Use it as an identity metaphor; use Goals and Today to decide what actually matters.'
+  'GPP is a symbolic scoreboard, not money or measured economic value. Use Goals and the active work list to decide what matters.'
 
 export function ProgressScreen() {
   const now = new Date()
@@ -166,6 +167,7 @@ export function ProgressScreen() {
 
   return (
     <div className="space-y-8">
+      <TodayScreen />
       {/* Hero row — GPP left, trailing-30 right, both big, both window-independent */}
       <div className="flex flex-wrap items-start justify-between gap-x-10 gap-y-6">
         <div>

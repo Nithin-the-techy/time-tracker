@@ -1,20 +1,18 @@
 'use client'
 
-import { Crosshair, LineChart, Database, Settings, LogIn, Target } from 'lucide-react'
+import { LineChart, History, Settings, LogIn, Target } from 'lucide-react'
 import { useUIStore, type ScreenTab } from '@/store/ui-store'
 import { ProgressScreen } from '@/components/screens/progress-screen'
 import { DatabaseScreen } from '@/components/screens/database-screen'
 import { DepartmentPage } from '@/components/screens/department-page'
 import { SettingsScreen } from '@/components/screens/settings-screen'
 import { LogModal } from '@/components/log-modal'
-import { TodayScreen } from '@/components/screens/today-screen'
 import { GoalsScreen } from '@/components/screens/goals-screen'
 
 const TABS: { id: ScreenTab; label: string; icon: React.ElementType }[] = [
-  { id: 'today', label: 'Today', icon: Crosshair },
+  { id: 'progress', label: 'Progress', icon: LineChart },
   { id: 'goals', label: 'Goals', icon: Target },
-  { id: 'progress', label: 'Score', icon: LineChart },
-  { id: 'database', label: 'Data', icon: Database },
+  { id: 'database', label: 'History', icon: History },
   { id: 'settings', label: 'Settings', icon: Settings },
 ]
 
@@ -28,7 +26,6 @@ export function Dashboard() {
       <Header />
 
       <main className="flex-1 w-full max-w-5xl mx-auto px-4 py-5 pb-24">
-        {tab === 'today' && <TodayScreen />}
         {tab === 'goals' && <GoalsScreen />}
         {tab === 'progress' && <ProgressScreen />}
         {tab === 'database' && activeDeptSlug && <DepartmentPage slug={activeDeptSlug} />}

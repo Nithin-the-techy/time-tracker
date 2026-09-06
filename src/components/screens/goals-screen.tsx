@@ -29,14 +29,13 @@ export function GoalsScreen() {
     <div className="space-y-6 max-w-3xl mx-auto">
       <div>
         <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Desired states</p>
-        <h1 className="font-serif text-3xl mt-1">Goals are completed by solving their gaps</h1>
-        <p className="text-sm text-muted-foreground mt-2 max-w-2xl">Every goal defines 100%, exposes what prevents it, and keeps a concrete next action attached to the problem.</p>
+        <h1 className="font-serif text-3xl mt-1">Goals</h1>
       </div>
 
-      <CreateGoalPanel departments={departments} hasExamSprint={goals.some((goal) => goal.title.startsWith('Exam sprint') && ['active', 'paused', 'draft'].includes(goal.status))} />
+      <CreateGoalPanel departments={departments} />
 
       {loading ? <p className="text-sm text-muted-foreground text-center py-8">Loading goals…</p> : goals.length === 0 ? (
-        <p className="text-sm text-muted-foreground text-center py-8">No goals yet. Start with the exam template or define one from scratch.</p>
+        <p className="text-sm text-muted-foreground text-center py-8">No goals yet. Create one when you have an outcome to pursue.</p>
       ) : (
         <div className="space-y-3">
           {goals.map((goal) => <GoalRow key={goal.id} goal={goal} onClick={() => openGoal(goal.id)} />)}
@@ -46,28 +45,17 @@ export function GoalsScreen() {
   )
 }
 
-function CreateGoalPanel({ departments, hasExamSprint }: { departments: ReturnType<typeof useDepartments>['departments']; hasExamSprint: boolean }) {
+function CreateGoalPanel({ departments }: { departments: ReturnType<typeof useDepartments>['departments'] }) {
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
   const today = toKey(new Date())
   const initialTarget = toKey(addDays(new Date(), 17))
-  const [examTarget, setExamTarget] = useState(initialTarget)
   const [departmentId, setDepartmentId] = useState(departments[0]?.id ?? '')
   const [title, setTitle] = useState('')
   const [outcome, setOutcome] = useState('')
   const [targetDate, setTargetDate] = useState(initialTarget)
 
   const effectiveDepartmentId = departmentId || departments[0]?.id || ''
-
-  async function createExam() {
-    setBusy(true)
-    try {
-      await store.createExamSprint({ startDate: today, targetDate: examTarget })
-      toast.success('Reusable Education sprint created with five editable subject targets')
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Could not create exam sprint')
-    } finally { setBusy(false) }
-  }
 
   async function createCustom() {
     if (!effectiveDepartmentId || !title.trim() || !outcome.trim()) return
@@ -84,15 +72,6 @@ function CreateGoalPanel({ departments, hasExamSprint }: { departments: ReturnTy
   return (
     <Card className="border-[var(--growth)]/20">
       <CardContent className="p-4 space-y-4">
-        {!hasExamSprint && (
-          <div className="flex flex-wrap items-end gap-2 pb-4 border-b border-border">
-            <div className="flex-1 min-w-[190px]">
-              <Label className="text-[11px]">Exam sprint target date</Label>
-              <Input type="date" min={today} value={examTarget} onChange={(e) => setExamTarget(e.target.value)} />
-            </div>
-            <Button onClick={createExam} disabled={busy}><GraduationCap className="h-4 w-4 mr-1" /> Create exam sprint</Button>
-          </div>
-        )}
         {!open ? (
           <Button variant="outline" className="w-full" onClick={() => setOpen(true)}><CirclePlus className="h-4 w-4 mr-1" /> Define another goal</Button>
         ) : (

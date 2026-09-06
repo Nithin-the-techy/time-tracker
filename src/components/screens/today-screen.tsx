@@ -41,7 +41,7 @@ export function TodayScreen() {
     setBusy(action.id)
     try {
       await store.startFocusSession(action.id)
-      toast.success('Session started. Produce the proof, then stop.')
+      toast.success('Session started')
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Could not start session')
     } finally {
@@ -52,8 +52,11 @@ export function TodayScreen() {
   async function shrink(action: GoalAction) {
     setBusy(action.id)
     try {
-      await store.updateGoalAction(action.id, { plannedMinutes: 10, status: 'today' })
-      toast.success('Rescue mode: only ten honest minutes are required now')
+      const value = window.prompt('How many minutes should this action take now?', String(Math.min(action.plannedMinutes, 25)))
+      const minutes = Number(value)
+      if (!Number.isFinite(minutes) || minutes < 1) return
+      await store.updateGoalAction(action.id, { plannedMinutes: Math.min(720, Math.round(minutes)), status: 'today' })
+      toast.success('Action scope adjusted')
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Could not enter rescue mode')
     } finally {
@@ -77,7 +80,7 @@ export function TodayScreen() {
   return (
     <div className="space-y-5 max-w-3xl mx-auto">
       <section className="space-y-2">
-        <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Current sprint</p>
+        <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Current focus</p>
         <button className="w-full text-left" onClick={() => openGoal(primary.id)}>
           <div className="flex items-start justify-between gap-4">
             <div>
@@ -132,7 +135,7 @@ export function TodayScreen() {
                       <Play className="h-3.5 w-3.5 mr-1" /> Start
                     </Button>
                     <Button size="sm" variant="ghost" onClick={() => shrink(action)} disabled={busy === action.id}>
-                      <RotateCcw className="h-3.5 w-3.5 mr-1" /> I drifted · make it 10m
+                      <RotateCcw className="h-3.5 w-3.5 mr-1" /> Adjust scope
                     </Button>
                   </div>
                 </div>
@@ -157,8 +160,8 @@ export function TodayScreen() {
       )}
 
       <div className="flex items-center justify-between text-xs text-muted-foreground border-t border-border pt-4">
-        <span>Charts measure the past. This screen changes the next hour.</span>
-        <Button variant="ghost" size="sm" onClick={() => setTab('progress')}>Open scoreboard</Button>
+        <span>Start work here; history stays in the log.</span>
+        <Button variant="ghost" size="sm" onClick={() => setTab('goals')}>Open goals</Button>
       </div>
     </div>
   )
@@ -203,11 +206,11 @@ function RunningSession({ session, action, goalTitle }: { session: FocusSession;
         {action.definitionOfDone && <div className="rounded-md bg-[var(--growth)]/8 border border-[var(--growth)]/20 p-3 text-sm"><CheckCircle2 className="h-4 w-4 inline mr-2" />{action.definitionOfDone}</div>}
         <div className="grid sm:grid-cols-[110px_1fr] gap-3">
           <div><Label className="text-[11px]">Actual minutes</Label><Input type="number" min={1} max={720} value={minutes} onChange={(e) => setMinutes(e.target.value)} /></div>
-          <div><Label className="text-[11px]">Output / evidence</Label><Input value={output} onChange={(e) => setOutput(e.target.value)} placeholder="What now exists that did not exist before?" /></div>
+          <div><Label className="text-[11px]">Result (optional)</Label><Input value={output} onChange={(e) => setOutput(e.target.value)} placeholder="Optional note" /></div>
         </div>
         <div><Label className="text-[11px]">Friction or interruption (optional)</Label><Textarea value={friction} onChange={(e) => setFriction(e.target.value)} rows={2} /></div>
         <div className="flex flex-wrap gap-2">
-          <Button onClick={() => finish('completed')} disabled={finishing || !output.trim()}><CheckCircle2 className="h-4 w-4 mr-1" /> Finish with proof</Button>
+          <Button onClick={() => finish('completed')} disabled={finishing}><CheckCircle2 className="h-4 w-4 mr-1" /> Finish session</Button>
           <Button variant="outline" onClick={() => finish('interrupted')} disabled={finishing}><Pause className="h-4 w-4 mr-1" /> Interrupted · keep today</Button>
           <Button variant="ghost" onClick={() => finish('abandoned')} disabled={finishing}><Clock3 className="h-4 w-4 mr-1" /> Return to backlog</Button>
         </div>

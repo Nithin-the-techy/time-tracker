@@ -9,7 +9,7 @@ import {
 // progress — combined day + week view, month/year modes, standings
 // database — departments and raw range browsing (no motivation, just data)
 // settings — weights, rivals, backups
-export type ScreenTab = 'today' | 'goals' | 'progress' | 'database' | 'settings'
+export type ScreenTab = 'goals' | 'progress' | 'database' | 'settings'
 
 // Which window the Progress tab shows. 'dayweek' combines the current day
 // with the rolling last-7-days; month/year are rolling 30/365-day windows.
@@ -72,7 +72,7 @@ function defaultGranForRange(from: string, to: string): Granularity {
 }
 
 export const useUIStore = create<UIState>((set) => ({
-  tab: 'today',
+  tab: 'progress',
   setTab: (t) => set({ tab: t, activeDeptSlug: null, activeGoalId: null }),
 
   progressMode: 'dayweek',

@@ -494,11 +494,6 @@ export const store = {
     await this.loadGoals()
   },
 
-  async createExamSprint(input: { startDate: string; targetDate: string }) {
-    await postJson('/api/goals', { template: 'exam-sprint', ...input })
-    await this.loadGoals()
-  },
-
   async updateGoal(id: string, input: Partial<Pick<Goal, 'title' | 'outcome' | 'whyNow' | 'constraints' | 'priority' | 'status' | 'startDate' | 'targetDate'>>) {
     await patchJson(`/api/goals/${id}`, input)
     await this.loadGoals()
