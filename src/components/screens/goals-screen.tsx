@@ -126,9 +126,8 @@ function GoalWorkbench({ goal, onBack }: { goal: Goal; onBack: () => void }) {
     <div className="space-y-5 max-w-3xl mx-auto">
       <Button variant="ghost" size="sm" onClick={onBack}><ArrowLeft className="h-4 w-4 mr-1" /> All work</Button>
       <section>
-        <div className="flex items-start justify-between gap-4"><div><p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">{workflow.label} workbench</p><h1 className="font-serif text-3xl mt-1">{goal.title}</h1><p className="text-sm text-muted-foreground mt-2">{goal.outcome}</p></div><div className="text-right"><p className="font-serif text-4xl text-[var(--growth)]">{Math.round(progress * 100)}%</p><p className="text-[11px] text-muted-foreground">{deadlineLabel(daysRemaining(goal.targetDate))}</p></div></div>
+        <div className="flex items-start justify-between gap-4"><div><p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">{goal.department.name.replace('Department of ', '')}</p><h1 className="font-serif text-3xl mt-1">{goal.title}</h1><p className="text-sm text-muted-foreground mt-2">{goal.outcome}</p></div><div className="text-right"><p className="font-serif text-4xl text-[var(--growth)]">{Math.round(progress * 100)}%</p><p className="text-[11px] text-muted-foreground">{deadlineLabel(daysRemaining(goal.targetDate))}</p></div></div>
         <div className="h-2 bg-muted rounded-full overflow-hidden mt-4"><div className="h-full bg-[var(--growth)]" style={{ width: `${progress * 100}%` }} /></div>
-        <SprintLinkPanel goal={goal} />
         <div className="flex flex-wrap gap-2 mt-3">
           {goal.status === 'active' ? <Button variant="outline" size="sm" onClick={() => store.updateGoal(goal.id, { status: 'paused' })}><Pause className="h-3.5 w-3.5 mr-1" /> Pause</Button> : <Button variant="outline" size="sm" onClick={() => store.updateGoal(goal.id, { status: 'active' })}><Play className="h-3.5 w-3.5 mr-1" /> Activate</Button>}
           <Button variant="ghost" size="sm" onClick={() => store.updateGoal(goal.id, { status: 'completed' })}><Check className="h-3.5 w-3.5 mr-1" /> Mark complete</Button>
@@ -144,20 +143,6 @@ function GoalWorkbench({ goal, onBack }: { goal: Goal; onBack: () => void }) {
       {section === 'actions' && <ActionsPanel goal={goal} />}
     </div>
   )
-}
-
-function SprintLinkPanel({ goal }: { goal: Goal }) {
-  const { sprints } = useSprints()
-  const [sprintId, setSprintId] = useState('')
-  const linked = sprints.filter((sprint) => sprint.goals.some((link) => link.goalId === goal.id))
-  const available = sprints.filter((sprint) => !sprint.goals.some((link) => link.goalId === goal.id) && sprint.status !== 'archived')
-  async function attach() {
-    const sprint = sprints.find((item) => item.id === sprintId)
-    if (!sprint) return
-    try { await store.updateSprint(sprint.id, { goalIds: [...sprint.goals.map((link) => link.goalId), goal.id] }); setSprintId(''); toast.success('Goal added to Sprint') }
-    catch (error) { toast.error(error instanceof Error ? error.message : 'Could not link Sprint') }
-  }
-  return <div className="mt-4 flex flex-wrap items-center gap-2 text-xs"><span className="text-muted-foreground">Sprints:</span>{linked.length ? linked.map((sprint) => <span key={sprint.id} className="rounded-full border border-border px-2 py-1">{sprint.name}</span>) : <span className="text-muted-foreground">none</span>}{available.length > 0 && <><select value={sprintId} onChange={(e) => setSprintId(e.target.value)} className="h-8 rounded-md border border-input bg-background px-2 text-xs"><option value="">Add to Sprint…</option>{available.map((sprint) => <option key={sprint.id} value={sprint.id}>{sprint.name}</option>)}</select><Button size="sm" variant="outline" onClick={attach} disabled={!sprintId}>Add</Button></>}</div>
 }
 
 function TargetsPanel({ goal }: { goal: Goal }) {

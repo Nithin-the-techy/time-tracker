@@ -1,14 +1,13 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { AlertTriangle, ArrowRight, CheckCircle2, Clock3, Pause, Play, RotateCcw, Target } from 'lucide-react'
+import { ArrowRight, CheckCircle2, Clock3, Pause, Play, RotateCcw, Target } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useGoals, store, type FocusSession, type GoalAction } from '@/lib/hooks'
-import { daysRemaining, formatTargetValue, goalProgress } from '@/lib/goal-metrics'
 import { useUIStore } from '@/store/ui-store'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -31,11 +30,6 @@ export function TodayScreen() {
   const running = actions
     .flatMap(({ goal, action }) => action.sessions.map((session) => ({ goal, action, session })))
     .find(({ session }) => session.status === 'running')
-
-  const orphanProblems = activeGoals.flatMap((goal) => {
-    const linked = new Set(goal.actions.filter((a) => !['completed', 'cancelled'].includes(a.status)).map((a) => a.problemId))
-    return goal.problems.filter((p) => p.status === 'open' && !linked.has(p.id)).map((problem) => ({ goal, problem }))
-  })
 
   async function start(action: GoalAction) {
     setBusy(action.id)
@@ -79,36 +73,7 @@ export function TodayScreen() {
 
   return (
     <div className="space-y-5 max-w-3xl mx-auto">
-      <section className="space-y-2">
-        <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Current focus</p>
-        <button className="w-full text-left" onClick={() => openGoal(primary.id)}>
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h1 className="font-serif text-3xl leading-tight">{primary.title}</h1>
-              <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{primary.outcome}</p>
-            </div>
-            <div className="text-right shrink-0">
-              <p className="font-serif text-3xl text-[var(--growth)]">{Math.round(goalProgress(primary) * 100)}%</p>
-              <p className="text-[11px] text-muted-foreground">{deadlineLabel(daysRemaining(primary.targetDate))}</p>
-            </div>
-          </div>
-          <div className="h-2 bg-muted rounded-full overflow-hidden mt-3">
-            <div className="h-full bg-[var(--growth)] transition-all" style={{ width: `${goalProgress(primary) * 100}%` }} />
-          </div>
-        </button>
-        {primary.targets.length > 0 && (
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 pt-1">
-            {primary.targets.map((target) => (
-              <div key={target.id} className="border border-border rounded-md p-2">
-                <p className="text-xs truncate">{target.label}</p>
-                <p className="text-[11px] text-muted-foreground mt-0.5">
-                  {formatTargetValue(target.currentValue, target.unit)} / {formatTargetValue(target.targetValue, target.unit)}
-                </p>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
+      <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Now</p>
 
       {running ? (
         <RunningSession session={running.session} action={running.action} goalTitle={running.goal.title} />
@@ -118,8 +83,8 @@ export function TodayScreen() {
           <CardContent className="space-y-2">
             {actions.length === 0 ? (
               <div className="py-5 text-center">
-                <p className="text-sm text-muted-foreground mb-3">No next action is committed. A goal without a next action cannot change reality.</p>
-                <Button variant="outline" onClick={() => openGoal(primary.id)}>Choose actions</Button>
+                <p className="text-sm text-muted-foreground mb-3">Choose an action from a goal to put it here.</p>
+                <Button variant="outline" onClick={() => openGoal(primary.id)}>Open goal</Button>
               </div>
             ) : actions.map(({ goal, action }, index) => (
               <div key={action.id} className="rounded-md border border-border p-3 flex items-start gap-3">
@@ -145,24 +110,6 @@ export function TodayScreen() {
         </Card>
       )}
 
-      {orphanProblems.length > 0 && (
-        <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-amber-400" /> Gaps with no next action</CardTitle></CardHeader>
-          <CardContent className="space-y-2">
-            {orphanProblems.slice(0, 4).map(({ goal, problem }) => (
-              <button key={problem.id} onClick={() => openGoal(goal.id)} className="w-full text-left text-sm border-l-2 border-amber-400/60 pl-3 py-1 hover:text-[var(--growth)]">
-                {problem.statement}
-                <span className="block text-[11px] text-muted-foreground">{goal.title}</span>
-              </button>
-            ))}
-          </CardContent>
-        </Card>
-      )}
-
-      <div className="flex items-center justify-between text-xs text-muted-foreground border-t border-border pt-4">
-        <span>Start work here; history stays in the log.</span>
-        <Button variant="ghost" size="sm" onClick={() => setTab('goals')}>Open goals</Button>
-      </div>
     </div>
   )
 }
