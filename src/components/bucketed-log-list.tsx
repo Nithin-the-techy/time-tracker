@@ -142,6 +142,7 @@ function EntryRow({
           <span className="text-muted-foreground tabular-nums">{time || '—'}</span>
         </div>
         {entry.note && <p className="text-xs text-muted-foreground mt-0.5">{entry.note}</p>}
+        {(entry as any).focusSession && <p className="text-[11px] text-muted-foreground mt-1">{(entry as any).focusSession.sprintName ? `${(entry as any).focusSession.sprintName} · ` : ''}{(entry as any).focusSession.goalTitle} · {(entry as any).focusSession.actionTitle}</p>}
       </div>
       <button
         type="button"

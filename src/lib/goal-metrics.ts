@@ -6,7 +6,16 @@ export function targetProgress(target: GoalTarget): number {
 }
 
 export function goalProgress(goal: Goal): number {
-  if (goal.targets.length === 0) return 0
+  // A goal without explicit targets is still real work: completed actions are
+  // its measurable progress. Targets override this when the user wants a
+  // more precise, weighted metric.
+  if (goal.targets.length === 0) {
+    const actions = goal.actions.filter((action) => action.status !== 'cancelled')
+    if (actions.length === 0) return 0
+    const planned = actions.reduce((sum, action) => sum + Math.max(1, action.plannedMinutes), 0)
+    const completed = actions.filter((action) => action.status === 'completed').reduce((sum, action) => sum + Math.max(1, action.plannedMinutes), 0)
+    return Math.min(1, completed / planned)
+  }
   const totalWeight = goal.targets.reduce((sum, target) => sum + Math.max(0.01, target.weight), 0)
   return goal.targets.reduce((sum, target) => sum + targetProgress(target) * Math.max(0.01, target.weight), 0) / totalWeight
 }

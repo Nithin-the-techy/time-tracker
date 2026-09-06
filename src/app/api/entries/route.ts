@@ -21,6 +21,15 @@ export async function GET(req: NextRequest) {
     include: {
       department: true,
       subdepartment: true,
+      focusSession: {
+        include: {
+          action: {
+            include: {
+              goal: { include: { sprintLinks: { include: { sprint: true } } } },
+            },
+          },
+        },
+      },
     },
     orderBy: { entryTimestamp: 'desc' },
   })
@@ -48,6 +57,11 @@ export async function GET(req: NextRequest) {
         name: e.subdepartment.name,
         valueWeight: e.subdepartment.valueWeight,
       },
+      focusSession: e.focusSession ? {
+        actionTitle: e.focusSession.action.title,
+        goalTitle: e.focusSession.action.goal.title,
+        sprintName: e.focusSession.action.goal.sprintLinks[0]?.sprint.name ?? null,
+      } : null,
     })),
   })
 }

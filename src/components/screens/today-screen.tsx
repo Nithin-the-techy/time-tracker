@@ -100,7 +100,7 @@ export function TodayScreen() {
                       <Play className="h-3.5 w-3.5 mr-1" /> Start
                     </Button>
                     <Button size="sm" variant="ghost" onClick={() => shrink(action)} disabled={busy === action.id}>
-                      <RotateCcw className="h-3.5 w-3.5 mr-1" /> Adjust scope
+                      <RotateCcw className="h-3.5 w-3.5 mr-1" /> Resize
                     </Button>
                   </div>
                 </div>
@@ -159,8 +159,8 @@ function RunningSession({ session, action, goalTitle }: { session: FocusSession;
         <div><Label className="text-[11px]">Friction or interruption (optional)</Label><Textarea value={friction} onChange={(e) => setFriction(e.target.value)} rows={2} /></div>
         <div className="flex flex-wrap gap-2">
           <Button onClick={() => finish('completed')} disabled={finishing}><CheckCircle2 className="h-4 w-4 mr-1" /> Finish session</Button>
-          <Button variant="outline" onClick={() => finish('interrupted')} disabled={finishing}><Pause className="h-4 w-4 mr-1" /> Interrupted · keep today</Button>
-          <Button variant="ghost" onClick={() => finish('abandoned')} disabled={finishing}><Clock3 className="h-4 w-4 mr-1" /> Return to backlog</Button>
+          <Button variant="outline" onClick={() => finish('interrupted')} disabled={finishing}><Pause className="h-4 w-4 mr-1" /> Interrupted · keep in Now</Button>
+          <Button variant="ghost" onClick={() => finish('abandoned')} disabled={finishing}><Clock3 className="h-4 w-4 mr-1" /> Defer to backlog</Button>
         </div>
       </CardContent>
     </Card>

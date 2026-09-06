@@ -25,10 +25,11 @@ export function GoalsScreen() {
   const openGoal = useUIStore((s) => s.openGoal)
   const closeGoal = useUIStore((s) => s.closeGoal)
   const activeGoal = goals.find((goal) => goal.id === activeGoalId)
+  const visibleGoals = goals.filter((goal) => !['completed', 'abandoned'].includes(goal.status))
   const activeSprint = sprints.find((sprint) => sprint.status === 'active')
   const activeSprintGoalIds = new Set(activeSprint?.goals.map((link) => link.goalId) ?? [])
-  const sprintGoals = goals.filter((goal) => activeSprintGoalIds.has(goal.id))
-  const otherGoals = goals.filter((goal) => !activeSprintGoalIds.has(goal.id))
+  const sprintGoals = visibleGoals.filter((goal) => activeSprintGoalIds.has(goal.id))
+  const otherGoals = visibleGoals.filter((goal) => !activeSprintGoalIds.has(goal.id))
   const hasExecution = goals.some((goal) => goal.actions.some((action) => action.status === 'today' || action.status === 'in_progress'))
 
   if (activeGoal) return <GoalWorkbench goal={activeGoal} onBack={closeGoal} />
@@ -43,7 +44,7 @@ export function GoalsScreen() {
       <CreateGoalPanel departments={departments} sprintId={activeSprint?.id ?? null} sprintName={activeSprint?.name ?? null} />
       {hasExecution && <TodayScreen />}
 
-      {loading ? <p className="text-sm text-muted-foreground text-center py-8">Loading…</p> : goals.length === 0 ? null : (
+      {loading ? <p className="text-sm text-muted-foreground text-center py-8">Loading…</p> : visibleGoals.length === 0 ? null : (
         <>
           {activeSprint && <section className="space-y-3"><p className="text-sm text-muted-foreground">{activeSprint.name}</p>{sprintGoals.length > 0 ? <div className="space-y-3">{sprintGoals.map((goal) => <GoalRow key={goal.id} goal={goal} onClick={() => openGoal(goal.id)} />)}</div> : <p className="text-sm text-muted-foreground">Add a goal to this Sprint.</p>}</section>}
           {otherGoals.length > 0 && <section className="space-y-3"><p className="text-sm text-muted-foreground">Other goals</p><div className="space-y-3">{otherGoals.map((goal) => <GoalRow key={goal.id} goal={goal} onClick={() => openGoal(goal.id)} />)}</div></section>}
@@ -117,8 +118,10 @@ function GoalRow({ goal, onClick }: { goal: Goal; onClick: () => void }) {
 }
 
 function GoalWorkbench({ goal, onBack }: { goal: Goal; onBack: () => void }) {
-  const workflow = departmentModule(goal.moduleKey)
-  const [section, setSection] = useState<'targets' | 'problems' | 'actions'>('targets')
+  const [section, setSection] = useState<'targets' | 'problems' | 'actions'>('actions')
+  const [editing, setEditing] = useState(false)
+  const [title, setTitle] = useState(goal.title)
+  const [outcome, setOutcome] = useState(goal.outcome)
   const progress = goalProgress(goal)
   const unresolved = goal.problems.filter((p) => p.status === 'open')
 
@@ -126,11 +129,13 @@ function GoalWorkbench({ goal, onBack }: { goal: Goal; onBack: () => void }) {
     <div className="space-y-5 max-w-3xl mx-auto">
       <Button variant="ghost" size="sm" onClick={onBack}><ArrowLeft className="h-4 w-4 mr-1" /> All work</Button>
       <section>
-        <div className="flex items-start justify-between gap-4"><div><p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">{goal.department.name.replace('Department of ', '')}</p><h1 className="font-serif text-3xl mt-1">{goal.title}</h1><p className="text-sm text-muted-foreground mt-2">{goal.outcome}</p></div><div className="text-right"><p className="font-serif text-4xl text-[var(--growth)]">{Math.round(progress * 100)}%</p><p className="text-[11px] text-muted-foreground">{deadlineLabel(daysRemaining(goal.targetDate))}</p></div></div>
+        <div className="flex items-start justify-between gap-4"><div className="min-w-0 flex-1"><p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">{goal.department.name.replace('Department of ', '')}</p>{editing ? <div className="space-y-2 mt-2"><Input value={title} onChange={(event) => setTitle(event.target.value)} /><Textarea value={outcome} onChange={(event) => setOutcome(event.target.value)} rows={2} /><div className="flex gap-2"><Button size="sm" onClick={() => { store.updateGoal(goal.id, { title, outcome }).then(() => setEditing(false)).catch((error) => toast.error(error.message)) }}>Save</Button><Button size="sm" variant="ghost" onClick={() => { setTitle(goal.title); setOutcome(goal.outcome); setEditing(false) }}>Cancel</Button></div></div> : <><h1 className="font-serif text-3xl mt-1">{goal.title}</h1><p className="text-sm text-muted-foreground mt-2">{goal.outcome}</p></>}</div><div className="text-right"><p className="font-serif text-4xl text-[var(--growth)]">{Math.round(progress * 100)}%</p><p className="text-[11px] text-muted-foreground">{deadlineLabel(daysRemaining(goal.targetDate))}</p></div></div>
         <div className="h-2 bg-muted rounded-full overflow-hidden mt-4"><div className="h-full bg-[var(--growth)]" style={{ width: `${progress * 100}%` }} /></div>
         <div className="flex flex-wrap gap-2 mt-3">
           {goal.status === 'active' ? <Button variant="outline" size="sm" onClick={() => store.updateGoal(goal.id, { status: 'paused' })}><Pause className="h-3.5 w-3.5 mr-1" /> Pause</Button> : <Button variant="outline" size="sm" onClick={() => store.updateGoal(goal.id, { status: 'active' })}><Play className="h-3.5 w-3.5 mr-1" /> Activate</Button>}
-          <Button variant="ghost" size="sm" onClick={() => store.updateGoal(goal.id, { status: 'completed' })}><Check className="h-3.5 w-3.5 mr-1" /> Mark complete</Button>
+          <Button variant="ghost" size="sm" onClick={() => setEditing(true)}>Edit</Button>
+          <Button variant="ghost" size="sm" onClick={() => store.updateGoal(goal.id, { status: 'completed' })}><Check className="h-3.5 w-3.5 mr-1" /> Complete</Button>
+          <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => { if (window.confirm('Archive this goal?')) store.updateGoal(goal.id, { status: 'abandoned' }) }}>Archive</Button>
         </div>
       </section>
 
@@ -181,7 +186,7 @@ function ActionsPanel({ goal }: { goal: Goal }) {
   const [commit, setCommit] = useState(true)
   async function add() { try { await store.addGoalAction({ goalId: goal.id, title, definitionOfDone: done || null, plannedMinutes: Number(minutes), context, subdepartmentId: subdepartmentId || null, status: commit ? 'today' : 'backlog' }); setTitle(''); setDone('') } catch (error) { toast.error(error instanceof Error ? error.message : 'Could not add action') } }
   const actions = [...goal.actions].sort((a, b) => statusOrder(a.status) - statusOrder(b.status))
-  return <div className="space-y-3">{actions.map((action) => <div key={action.id} className="border border-border rounded-md p-3 flex items-start gap-3"><div className="flex-1"><p className={cn('text-sm', action.status === 'completed' && 'line-through text-muted-foreground')}>{action.title}</p><p className="text-[11px] text-muted-foreground mt-1">{action.plannedMinutes}m · {action.context} · {action.status.replace('_', ' ')}</p>{action.definitionOfDone && <p className="text-xs mt-1">{action.definitionOfDone}</p>}</div>{action.status === 'backlog' && <Button size="sm" variant="outline" onClick={() => store.updateGoalAction(action.id, { status: 'today' }).catch((err) => toast.error(err.message))}>Add to now</Button>}</div>)}<Card><CardHeader className="pb-2"><CardTitle className="text-sm">Add action</CardTitle></CardHeader><CardContent className="space-y-2"><div className="grid sm:grid-cols-[1fr_110px] gap-2"><Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="What will you do?" /><Input type="number" min={1} max={720} value={minutes} onChange={(e) => setMinutes(e.target.value)} /></div><Input value={done} onChange={(e) => setDone(e.target.value)} placeholder="Result when done (optional)" /><div className="grid sm:grid-cols-2 gap-2"><select value={subdepartmentId} onChange={(e) => setSubdepartmentId(e.target.value)} className="h-10 rounded-md border border-input bg-background px-3 text-sm"><option value="">No category</option>{goal.department.subdepartments.map((sub) => <option key={sub.id} value={sub.id}>{sub.name}</option>)}</select><select value={context} onChange={(e) => setContext(e.target.value)} className="h-10 rounded-md border border-input bg-background px-3 text-sm">{workflow.suggestedContexts.map((value) => <option key={value}>{value}</option>)}</select></div><label className="flex items-center gap-2 text-xs text-muted-foreground"><input type="checkbox" checked={commit} onChange={(e) => setCommit(e.target.checked)} /> Add to current list</label><Button onClick={add} disabled={!title.trim() || Number(minutes) <= 0}><Plus className="h-4 w-4 mr-1" /> Add action</Button></CardContent></Card></div>
+  return <div className="space-y-3">{actions.map((action) => <div key={action.id} className="border border-border rounded-md p-3 flex items-start gap-3"><div className="flex-1"><p className={cn('text-sm', action.status === 'completed' && 'line-through text-muted-foreground')}>{action.title}</p><p className="text-[11px] text-muted-foreground mt-1">{action.plannedMinutes}m · {action.context} · {action.status.replace('_', ' ')}</p>{action.definitionOfDone && <p className="text-xs mt-1">{action.definitionOfDone}</p>}</div><div className="flex gap-1">{action.status === 'backlog' && <Button size="sm" variant="outline" onClick={() => store.updateGoalAction(action.id, { status: 'today' }).catch((err) => toast.error(err.message))}>Add to now</Button>}{!['completed', 'cancelled'].includes(action.status) && <Button size="sm" variant="ghost" onClick={() => store.updateGoalAction(action.id, { status: 'cancelled' }).catch((err) => toast.error(err.message))}>Archive</Button>}</div></div>)}<Card><CardHeader className="pb-2"><CardTitle className="text-sm">Add action</CardTitle></CardHeader><CardContent className="space-y-2"><div className="grid sm:grid-cols-[1fr_110px] gap-2"><Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="What will you do?" /><Input type="number" min={1} max={720} value={minutes} onChange={(e) => setMinutes(e.target.value)} /></div><Input value={done} onChange={(e) => setDone(e.target.value)} placeholder="Result when done (optional)" /><div className="grid sm:grid-cols-2 gap-2"><select value={subdepartmentId} onChange={(e) => setSubdepartmentId(e.target.value)} className="h-10 rounded-md border border-input bg-background px-3 text-sm"><option value="">No category</option>{goal.department.subdepartments.map((sub) => <option key={sub.id} value={sub.id}>{sub.name}</option>)}</select><select value={context} onChange={(e) => setContext(e.target.value)} className="h-10 rounded-md border border-input bg-background px-3 text-sm">{workflow.suggestedContexts.map((value) => <option key={value}>{value}</option>)}</select></div><label className="flex items-center gap-2 text-xs text-muted-foreground"><input type="checkbox" checked={commit} onChange={(e) => setCommit(e.target.checked)} /> Add to Now</label><Button onClick={add} disabled={!title.trim() || Number(minutes) <= 0}><Plus className="h-4 w-4 mr-1" /> Add action</Button></CardContent></Card></div>
 }
 
 function ModuleIcon({ moduleKey }: { moduleKey: string }) {

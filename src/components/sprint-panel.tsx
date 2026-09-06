@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { CalendarRange, Plus, Play, Pause } from 'lucide-react'
+import { CalendarRange, Plus, Play, Pause, Pencil } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -20,6 +20,7 @@ export function SprintPanel() {
   const [endDate, setEndDate] = useState(toKey(new Date()))
   const [busy, setBusy] = useState(false)
   const [goalId, setGoalId] = useState('')
+  const [editing, setEditing] = useState(false)
   const active = useMemo(() => sprints.find((s) => s.status === 'active'), [sprints])
   const visible = sprints.filter((s) => s.status !== 'archived').slice(0, 4)
 
@@ -48,6 +49,12 @@ export function SprintPanel() {
     } catch (error) { toast.error(error instanceof Error ? error.message : 'Could not add goal') }
   }
 
+  async function archiveActive() {
+    if (!active || !window.confirm('Archive this Sprint? Its goals remain available.')) return
+    await setStatus(active.id, 'paused')
+    await store.updateSprint(active.id, { status: 'archived' })
+  }
+
   const availableGoals = active ? goals.filter((goal) => goal.status === 'active' && !active.goals.some((link) => link.goalId === goal.id)) : []
 
   return (
@@ -61,8 +68,9 @@ export function SprintPanel() {
           <div className="rounded-md border border-[var(--growth)]/30 p-3">
             <div className="flex items-start justify-between gap-3">
               <div><p className="font-serif text-xl">{active.name}</p><p className="text-xs text-muted-foreground">{active.phase || 'Active phase'} · {active.startDate} → {active.endDate}</p></div>
-              <Button size="sm" variant="ghost" onClick={() => setStatus(active.id, 'paused')}><Pause className="h-3.5 w-3.5 mr-1" /> Pause</Button>
+              <div className="flex gap-1"><Button size="sm" variant="ghost" onClick={() => setEditing((value) => !value)}><Pencil className="h-3.5 w-3.5" /></Button><Button size="sm" variant="ghost" onClick={() => setStatus(active.id, 'paused')}><Pause className="h-3.5 w-3.5 mr-1" /> Pause</Button></div>
             </div>
+            {editing && <div className="grid sm:grid-cols-2 gap-2 mt-3"><Input defaultValue={active.name} onBlur={(event) => { const name = event.target.value.trim(); if (name && name !== active.name) store.updateSprint(active.id, { name }).catch((error) => toast.error(error.message)) }} /><Input defaultValue={active.phase ?? ''} placeholder="Phase note" onBlur={(event) => { const phase = event.target.value.trim() || null; if (phase !== active.phase) store.updateSprint(active.id, { phase }).catch((error) => toast.error(error.message)) }} /><Button size="sm" variant="ghost" className="sm:col-span-2 justify-start text-muted-foreground" onClick={archiveActive}>Archive Sprint</Button></div>}
             <p className="text-xs text-muted-foreground mt-3">{active.goals.length} goal{active.goals.length === 1 ? '' : 's'}</p>
             {availableGoals.length > 0 && <div className="flex gap-2 mt-3"><select value={goalId} onChange={(event) => setGoalId(event.target.value)} className="h-9 min-w-0 flex-1 rounded-md border border-input bg-background px-2 text-sm"><option value="">Add existing goal…</option>{availableGoals.map((goal) => <option key={goal.id} value={goal.id}>{goal.title}</option>)}</select><Button size="sm" variant="outline" onClick={attachGoal} disabled={!goalId}>Add</Button></div>}
           </div>
