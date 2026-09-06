@@ -4,7 +4,7 @@ import { useEffect, useSyncExternalStore } from 'react'
 import { store, type AppState } from '@/lib/store'
 
 // Re-export the model types — components import them from here.
-export type { Entry, Department, Subdepartment, DayAllowance, NeutralEntry, UnproductiveBlock, Goal, GoalTarget, GoalProblem, GoalAction, FocusSession } from '@/lib/store'
+export type { Entry, Department, Subdepartment, DayAllowance, NeutralEntry, UnproductiveBlock, Goal, GoalTarget, GoalProblem, GoalAction, FocusSession, Sprint, SprintGoal } from '@/lib/store'
 
 export function useBootstrap() {
   useEffect(() => {
@@ -58,6 +58,11 @@ export function useAllowances() {
 export function useGoals() {
   const goals = useStoreSlice((s) => s.goals)
   return { goals: goals ?? [], loading: !goals }
+}
+
+export function useSprints() {
+  const sprints = useStoreSlice((s) => s.sprints)
+  return { sprints: sprints ?? [], loading: !sprints }
 }
 
 // Range-bounded view. Serves from cache and refreshes in the background.

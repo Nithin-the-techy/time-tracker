@@ -82,9 +82,39 @@ model Goal {
   targets    GoalTarget[]
   problems   GoalProblem[]
   actions    GoalAction[]
+  sprintLinks SprintGoal[]
 
   @@index([status, priority])
   @@index([departmentId])
+}
+
+model Sprint {
+  id        String   @id @default(cuid())
+  name      String
+  phase     String?
+  status    String   @default("planned") // planned | active | paused | completed | archived
+  startDate String
+  endDate   String
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  goals SprintGoal[]
+
+  @@index([status, startDate])
+}
+
+model SprintGoal {
+  sprintId  String
+  goalId    String
+  sortOrder Int      @default(0)
+  addedAt   DateTime @default(now())
+
+  sprint Sprint @relation(fields: [sprintId], references: [id], onDelete: Cascade)
+  goal   Goal   @relation(fields: [goalId], references: [id], onDelete: Cascade)
+
+  @@id([sprintId, goalId])
+  @@index([goalId])
 }
 
 model GoalTarget {

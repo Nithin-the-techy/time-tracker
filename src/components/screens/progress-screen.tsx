@@ -66,6 +66,7 @@ import { CompositionDonut } from '@/components/charts/composition-donut'
 import { StandingsChart, type Standing } from '@/components/charts/standings-chart'
 import { useUIStore, type ProgressMode } from '@/store/ui-store'
 import { TodayScreen } from '@/components/screens/today-screen'
+import { SprintPanel } from '@/components/sprint-panel'
 
 const WINDOW_DAYS: Record<ProgressMode, number> = { dayweek: 7, month: 30, year: 365 }
 
@@ -168,6 +169,7 @@ export function ProgressScreen() {
   return (
     <div className="space-y-8">
       <TodayScreen />
+      <SprintPanel />
       {/* Hero row — GPP left, trailing-30 right, both big, both window-independent */}
       <div className="flex flex-wrap items-start justify-between gap-x-10 gap-y-6">
         <div>

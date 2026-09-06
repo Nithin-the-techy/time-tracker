@@ -15,6 +15,9 @@ command -v prisma >/dev/null 2>&1 || PRISMA="./node_modules/.bin/prisma"
 case "$DATABASE_URL" in
   postgres*)
     echo "vercel-build: Postgres DATABASE_URL detected → schema.postgres.prisma"
+    # Keep the hosted schema additive and in sync before Prisma Client is generated.
+    # This is required for newly introduced relational features such as Sprints.
+    "$PRISMA" db push --schema prisma/schema.postgres.prisma --skip-generate
     "$PRISMA" generate --schema prisma/schema.postgres.prisma
     ;;
   *)

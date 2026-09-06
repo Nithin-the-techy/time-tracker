@@ -1,6 +1,6 @@
-# Operations: goal engine specification (superseded draft)
+# Operations: goal and Sprint engine
 
-Status: **do not implement or deploy from this document.** Nithin rejected the baked exam template, the separate Today workflow, verbose product copy, and implementation before design approval. The branch is a prototype only. A replacement architecture must be presented as a complete proposal and explicitly approved before code, schema, data, or deployment changes continue.
+Status: implemented baseline for the universal execution system.
 
 The replacement must preserve these constraints:
 
@@ -10,7 +10,7 @@ The replacement must preserve these constraints:
 - Working UI copy is minimal.
 - Goal creation/management/execution and Progress/History views must not become competing sources of truth.
 
-The remaining content below records the earlier prototype design for historical comparison, not approval.
+The application starts empty of personal goals and Sprints. Exams, research, revenue, and other phases are ordinary user-created data.
 
 ## Product claim
 
@@ -119,17 +119,17 @@ An executable unit of work.
 - status and sort order;
 - definition of done / expected output.
 
-The Today screen shows at most three committed actions. A backlog may be large;
-the commitment list may not.
+The active-work list shows at most three committed actions. A backlog may be
+large; the commitment list may not.
 
 ### Focus session
 
 An intentional start/stop record linked to an action. A session can be running,
 completed, interrupted, or abandoned.
 
-On start, the UI shows the action, expected output, elapsed time, and one stop
-control. On stop, it asks for actual minutes, output/evidence, and the next
-action. Completed focus sessions create productive time entries so the existing
+On start, the UI shows the action, optional expected output, elapsed time, and
+stop controls. On stop, actual minutes and an optional result may be recorded.
+Completed focus sessions create productive time entries so the existing
 analytics remain useful.
 
 ### Check-in and recovery
@@ -138,41 +138,29 @@ Recovery is a first-class state transition, not a broken streak.
 
 - A quick check-in records energy, friction, and whether the user is on plan.
 - “I drifted” records the interruption without moral drama.
-- The rescue flow offers: resume, shrink to ten minutes, switch to an approved
-  low-context action, or deliberately rest.
+- Recovery offers: resume, choose a smaller scope, switch to another action, or
+  deliberately rest.
 - The recovery metric is time from interruption to the next started session.
 
-## First configured goal: exam sprint
+## User-created Sprints
 
-The exam sprint is ordinary Education data, not special-case code.
+A Sprint is a multi-day or multi-week phase. It can contain goals from several
+departments and begins with no personal defaults. Education, research, revenue,
+engineering, or any other phase uses the same Sprint model.
 
-- One active Education goal representing sustained planned effort through the
-  exam period.
-- One target per subject. Initial planning baseline: Physics 870 min,
-  Chemistry 660 min, Math 660 min, English 660 min, and CS 300 min.
-- Success of the discipline experiment is planned minutes honestly attempted,
-  not a guarantee of marks or completion of every ambition.
-- School/annual-practice context contains only interruptible work such as
-  exam-generator planning, outreach research, editing, or flashcards.
-- Deep study remains a separate context.
-
-All labels, dates, targets, and contexts remain editable.
-
-## Today screen
+## Progress and active work
 
 Order matters:
 
-1. Current sprint: days remaining, planned versus completed effort, and target
-   progress.
+1. Active Sprint: dates, phase name, connected goals, and progress.
 2. Running session, if any.
 3. Up to three committed actions with Start controls.
-4. Quick rescue and quick log.
+4. Scope adjustment, recovery, and quick log.
 5. Goal problems that have no next action.
 6. Compact daily evidence: productive, explicitly negative, neutral, unknown.
 
-The trillion-dollar GPP panel remains as a collapsible “mythic scoreboard.” It
-is an identity/metaphor layer and is labelled as such. It must not pretend to be
-financial output or outrank the current sprint.
+The trillion-dollar GPP panel remains a symbolic scoreboard. It must not pretend
+to be financial output or outrank the active Sprint and next actions.
 
 ## Time-accounting truth rules
 

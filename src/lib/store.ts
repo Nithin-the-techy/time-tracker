@@ -187,6 +187,30 @@ export interface Goal {
   targets: GoalTarget[]
   problems: GoalProblem[]
   actions: GoalAction[]
+  sprintLinks?: SprintGoal[]
+}
+
+export interface SprintGoal {
+  sprintId: string
+  goalId: string
+  sortOrder: number
+  addedAt: string
+  goal: Goal
+}
+
+export type SprintStatus = 'planned' | 'active' | 'paused' | 'completed' | 'archived'
+
+export interface Sprint {
+  id: string
+  name: string
+  phase: string | null
+  status: SprintStatus
+  startDate: string
+  endDate: string
+  notes: string | null
+  createdAt: string
+  updatedAt: string
+  goals: SprintGoal[]
 }
 
 export interface AppState {
@@ -199,6 +223,7 @@ export interface AppState {
   neutralEntries: NeutralEntry[]
   allowances: DayAllowance[]
   goals: Goal[]
+  sprints: Sprint[]
 }
 
 // --- Cache + subscription ---
@@ -282,7 +307,7 @@ export const store = {
     if (inflight.bootstrap !== undefined) return inflight.bootstrap as Promise<void>
     inflight.bootstrap = (async () => {
       try {
-        const [deptRes, rivalsRes, weightsRes, entriesRes, allowancesRes, blocksRes, neutralRes, goalsRes] = await Promise.all([
+        const [deptRes, rivalsRes, weightsRes, entriesRes, allowancesRes, blocksRes, neutralRes, goalsRes, sprintsRes] = await Promise.all([
           getJson('/api/departments'),
           getJson('/api/rivals'),
           getJson('/api/weights'),
@@ -291,6 +316,7 @@ export const store = {
           getJson(`/api/unproductive-blocks?from=${ALL_FROM}&to=${ALL_TO}`),
           getJson(`/api/neutral-entries?from=${ALL_FROM}&to=${ALL_TO}`),
           getJson('/api/goals'),
+          getJson('/api/sprints'),
         ])
         cached = {
           ...cached,
@@ -302,6 +328,7 @@ export const store = {
           unproductiveBlocks: blocksRes.blocks as UnproductiveBlock[],
           neutralEntries: neutralRes.entries as NeutralEntry[],
           goals: goalsRes.goals as Goal[],
+          sprints: sprintsRes.sprints as Sprint[],
         }
         notify()
       } finally {
@@ -478,6 +505,22 @@ export const store = {
     const data = await getJson('/api/goals')
     cached.goals = data.goals as Goal[]
     notify()
+  },
+
+  async loadSprints() {
+    const data = await getJson('/api/sprints')
+    cached.sprints = data.sprints as Sprint[]
+    notify()
+  },
+
+  async createSprint(input: { name: string; phase?: string | null; startDate: string; endDate: string; status?: SprintStatus; goalIds?: string[] }) {
+    await postJson('/api/sprints', input)
+    await this.loadSprints()
+  },
+
+  async updateSprint(id: string, input: Partial<Pick<Sprint, 'name' | 'phase' | 'status' | 'startDate' | 'endDate' | 'notes'>> & { goalIds?: string[] }) {
+    await patchJson(`/api/sprints/${id}`, input)
+    await this.loadSprints()
   },
 
   async createGoal(input: {
