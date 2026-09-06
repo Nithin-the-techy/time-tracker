@@ -6,18 +6,20 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { useSprints, store } from '@/lib/hooks'
+import { useGoals, useSprints, store } from '@/lib/hooks'
 import { toKey } from '@/lib/dates'
 import { toast } from 'sonner'
 
 export function SprintPanel() {
   const { sprints, loading } = useSprints()
+  const { goals } = useGoals()
   const [open, setOpen] = useState(false)
   const [name, setName] = useState('')
   const [phase, setPhase] = useState('')
   const [startDate, setStartDate] = useState(toKey(new Date()))
   const [endDate, setEndDate] = useState(toKey(new Date()))
   const [busy, setBusy] = useState(false)
+  const [goalId, setGoalId] = useState('')
   const active = useMemo(() => sprints.find((s) => s.status === 'active'), [sprints])
   const visible = sprints.filter((s) => s.status !== 'archived').slice(0, 4)
 
@@ -37,10 +39,21 @@ export function SprintPanel() {
     catch (error) { toast.error(error instanceof Error ? error.message : 'Could not update Sprint') }
   }
 
+  async function attachGoal() {
+    if (!active || !goalId) return
+    try {
+      await store.updateSprint(active.id, { goalIds: [...active.goals.map((link) => link.goalId), goalId] })
+      setGoalId('')
+      toast.success('Goal added to Sprint')
+    } catch (error) { toast.error(error instanceof Error ? error.message : 'Could not add goal') }
+  }
+
+  const availableGoals = active ? goals.filter((goal) => goal.status === 'active' && !active.goals.some((link) => link.goalId === goal.id)) : []
+
   return (
     <Card className="border-[var(--growth)]/25">
       <CardHeader className="pb-2 flex-row items-center justify-between space-y-0">
-        <CardTitle className="text-sm flex items-center gap-2"><CalendarRange className="h-4 w-4 text-[var(--growth)]" /> Sprint</CardTitle>
+        <CardTitle className="text-sm flex items-center gap-2"><CalendarRange className="h-4 w-4 text-[var(--growth)]" /> {active ? 'Active Sprint' : 'Sprint'}</CardTitle>
         <Button variant="ghost" size="sm" onClick={() => setOpen((value) => !value)}><Plus className="h-4 w-4 mr-1" /> New</Button>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -50,7 +63,8 @@ export function SprintPanel() {
               <div><p className="font-serif text-xl">{active.name}</p><p className="text-xs text-muted-foreground">{active.phase || 'Active phase'} · {active.startDate} → {active.endDate}</p></div>
               <Button size="sm" variant="ghost" onClick={() => setStatus(active.id, 'paused')}><Pause className="h-3.5 w-3.5 mr-1" /> Pause</Button>
             </div>
-            <p className="text-xs text-muted-foreground mt-3">{active.goals.length} goal{active.goals.length === 1 ? '' : 's'} connected</p>
+            <p className="text-xs text-muted-foreground mt-3">{active.goals.length} goal{active.goals.length === 1 ? '' : 's'}</p>
+            {availableGoals.length > 0 && <div className="flex gap-2 mt-3"><select value={goalId} onChange={(event) => setGoalId(event.target.value)} className="h-9 min-w-0 flex-1 rounded-md border border-input bg-background px-2 text-sm"><option value="">Add existing goal…</option>{availableGoals.map((goal) => <option key={goal.id} value={goal.id}>{goal.title}</option>)}</select><Button size="sm" variant="outline" onClick={attachGoal} disabled={!goalId}>Add</Button></div>}
           </div>
         ) : null}
 

@@ -21,6 +21,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const goalIds = Array.isArray(body.goalIds) ? body.goalIds.map(String).filter(Boolean) : null
 
   const sprint = await db.$transaction(async (tx) => {
+    if (data.status === 'active') await tx.sprint.updateMany({ where: { status: 'active', id: { not: id } }, data: { status: 'paused' } })
     if (goalIds) {
       await tx.sprintGoal.deleteMany({ where: { sprintId: id } })
       for (const [sortOrder, goalId] of goalIds.entries()) {

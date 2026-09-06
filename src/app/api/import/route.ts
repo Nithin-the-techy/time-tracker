@@ -11,10 +11,12 @@ export async function POST(req: NextRequest) {
   try {
     await db.$transaction(async (tx) => {
       await tx.focusSession.deleteMany()
+      await tx.sprintGoal.deleteMany()
       await tx.goalAction.deleteMany()
       await tx.goalProblem.deleteMany()
       await tx.goalTarget.deleteMany()
       await tx.goal.deleteMany()
+      await tx.sprint.deleteMany()
       await tx.entry.deleteMany()
       await tx.weightChange.deleteMany()
       await tx.rivalSectorEstimate.deleteMany()
@@ -34,6 +36,12 @@ export async function POST(req: NextRequest) {
       }
       for (const g of body.goals ?? []) {
         await tx.goal.create({ data: { id: g.id, departmentId: g.departmentId, title: g.title, outcome: g.outcome, whyNow: g.whyNow ?? null, constraints: g.constraints ?? null, moduleKey: g.moduleKey ?? 'generic', status: g.status ?? 'active', priority: g.priority ?? 3, startDate: g.startDate, targetDate: g.targetDate, reviewCadence: g.reviewCadence ?? 'weekly', createdAt: new Date(g.createdAt ?? Date.now()) } })
+      }
+      for (const s of body.sprints ?? []) {
+        await tx.sprint.create({ data: { id: s.id, name: s.name, phase: s.phase ?? null, status: s.status ?? 'planned', startDate: s.startDate, endDate: s.endDate, notes: s.notes ?? null, createdAt: new Date(s.createdAt ?? Date.now()) } })
+      }
+      for (const link of body.sprintGoals ?? []) {
+        await tx.sprintGoal.create({ data: { sprintId: link.sprintId, goalId: link.goalId, sortOrder: link.sortOrder ?? 0, addedAt: new Date(link.addedAt ?? Date.now()) } })
       }
       for (const t of body.goalTargets ?? []) {
         await tx.goalTarget.create({ data: { id: t.id, goalId: t.goalId, subdepartmentId: t.subdepartmentId ?? null, label: t.label, unit: t.unit ?? 'percent', targetValue: t.targetValue, currentValue: t.currentValue ?? 0, progressSource: t.progressSource ?? 'manual', weight: t.weight ?? 1, sortOrder: t.sortOrder ?? 0 } })
@@ -88,10 +96,13 @@ function validateBackup(body: any): string | null {
   if (![body.departments, body.subdepartments, body.entries].every(rowsHaveIds)) return 'Invalid backup: every core record needs an id'
   const departmentIds = new Set(body.departments.map((d: any) => d.id))
   const subdepartmentIds = new Set(body.subdepartments.map((s: any) => s.id))
+  const goalIds = new Set((body.goals ?? []).map((g: any) => g.id))
+  const sprintIds = new Set((body.sprints ?? []).map((s: any) => s.id))
   if (body.subdepartments.some((s: any) => !departmentIds.has(s.departmentId))) return 'Invalid backup: orphaned subdepartment'
   if (body.entries.some((e: any) => !departmentIds.has(e.departmentId) || !subdepartmentIds.has(e.subdepartmentId) || !Number.isFinite(Number(e.durationMinutes)))) {
     return 'Invalid backup: malformed or orphaned time entry'
   }
+  if (body.sprintGoals && (!Array.isArray(body.sprintGoals) || body.sprintGoals.some((link: any) => !sprintIds.has(link.sprintId) || !goalIds.has(link.goalId)))) return 'Invalid backup: orphaned Sprint link'
   return null
 }
 

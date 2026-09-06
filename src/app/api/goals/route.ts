@@ -32,6 +32,7 @@ export async function POST(req: NextRequest) {
   const targetDate = String(body.targetDate ?? '')
   const priority = Math.min(5, Math.max(1, Math.round(Number(body.priority ?? 3))))
   const status = String(body.status ?? 'active')
+  const sprintId = body.sprintId ? String(body.sprintId) : null
 
   if (!departmentId || !title || !outcome || !DATE_KEY.test(startDate) || !DATE_KEY.test(targetDate)) {
     return NextResponse.json({ error: 'department, title, outcome, and valid dates are required' }, { status: 400 })
@@ -41,6 +42,10 @@ export async function POST(req: NextRequest) {
 
   const department = await db.department.findUnique({ where: { id: departmentId } })
   if (!department) return NextResponse.json({ error: 'department not found' }, { status: 400 })
+  if (sprintId) {
+    const sprint = await db.sprint.findUnique({ where: { id: sprintId } })
+    if (!sprint || sprint.status === 'archived') return NextResponse.json({ error: 'sprint not found' }, { status: 400 })
+  }
   const requestedModule = String(body.moduleKey ?? department.moduleKey) as DepartmentModuleKey
   const moduleKey = DEPARTMENT_MODULES[requestedModule] ? requestedModule : 'generic'
 
@@ -57,6 +62,7 @@ export async function POST(req: NextRequest) {
       whyNow: body.whyNow ? String(body.whyNow).slice(0, 1000) : null,
       constraints: body.constraints ? String(body.constraints).slice(0, 1000) : null,
       reviewCadence: String(body.reviewCadence ?? 'weekly').slice(0, 40),
+      sprintLinks: sprintId ? { create: { sprintId } } : undefined,
     },
     include: goalInclude,
   })

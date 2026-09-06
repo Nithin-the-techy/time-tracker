@@ -36,17 +36,20 @@ export async function POST(req: NextRequest) {
   if (endDate < startDate) return NextResponse.json({ error: 'end date must be on or after start date' }, { status: 400 })
   if (!STATUSES.has(status)) return NextResponse.json({ error: 'invalid sprint status' }, { status: 400 })
 
-  const sprint = await db.sprint.create({
-    data: {
-      name,
-      phase,
-      startDate,
-      endDate,
-      status,
-      notes: body.notes ? String(body.notes).slice(0, 2000) : null,
-      goals: goalIds.length ? { create: goalIds.map((goalId, sortOrder) => ({ goalId, sortOrder })) } : undefined,
-    },
-    include,
+  const sprint = await db.$transaction(async (tx) => {
+    if (status === 'active') await tx.sprint.updateMany({ where: { status: 'active' }, data: { status: 'paused' } })
+    return tx.sprint.create({
+      data: {
+        name,
+        phase,
+        startDate,
+        endDate,
+        status,
+        notes: body.notes ? String(body.notes).slice(0, 2000) : null,
+        goals: goalIds.length ? { create: goalIds.map((goalId, sortOrder) => ({ goalId, sortOrder })) } : undefined,
+      },
+      include,
+    })
   })
   return NextResponse.json({ sprint })
 }

@@ -532,9 +532,12 @@ export const store = {
     priority?: number
     whyNow?: string | null
     constraints?: string | null
+    sprintId?: string | null
   }) {
-    await postJson('/api/goals', input)
+    const data = await postJson('/api/goals', input)
     await this.loadGoals()
+    await this.loadSprints()
+    return data.goal as Goal
   },
 
   async updateGoal(id: string, input: Partial<Pick<Goal, 'title' | 'outcome' | 'whyNow' | 'constraints' | 'priority' | 'status' | 'startDate' | 'targetDate'>>) {

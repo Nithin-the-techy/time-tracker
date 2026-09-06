@@ -3,7 +3,7 @@ import { db } from '@/lib/db'
 
 // GET /api/export — full app state as JSON for backup.
 export async function GET() {
-  const [departments, subdepartments, entries, weeklyReviews, weightChanges, rivals, rivalEstimates, unproductiveBlocks, dayAllowances, neutralEntries, goals, goalTargets, goalProblems, goalActions, focusSessions] =
+  const [departments, subdepartments, entries, weeklyReviews, weightChanges, rivals, rivalEstimates, unproductiveBlocks, dayAllowances, neutralEntries, goals, sprints, sprintGoals, goalTargets, goalProblems, goalActions, focusSessions] =
     await Promise.all([
       db.department.findMany(),
       db.subdepartment.findMany(),
@@ -16,13 +16,15 @@ export async function GET() {
       db.dayAllowance.findMany(),
       db.neutralEntry.findMany(),
       db.goal.findMany(),
+      db.sprint.findMany(),
+      db.sprintGoal.findMany(),
       db.goalTarget.findMany(),
       db.goalProblem.findMany(),
       db.goalAction.findMany(),
       db.focusSession.findMany(),
     ])
   return NextResponse.json({
-    version: 5,
+    version: 6,
     departments,
     subdepartments,
     entries: entries.map((e) => ({ ...e, entryTimestamp: e.entryTimestamp.toISOString(), createdAt: e.createdAt.toISOString() })),
@@ -34,6 +36,8 @@ export async function GET() {
     dayAllowances: dayAllowances.map((a) => ({ date: a.date, sleepMinutes: a.sleepMinutes, neutralMinutes: a.neutralMinutes })),
     neutralEntries: neutralEntries.map((n) => ({ ...n, createdAt: n.createdAt.toISOString() })),
     goals,
+    sprints,
+    sprintGoals,
     goalTargets,
     goalProblems,
     goalActions,

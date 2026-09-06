@@ -20,10 +20,16 @@ import { TodayScreen } from '@/components/screens/today-screen'
 export function GoalsScreen() {
   const { goals, loading } = useGoals()
   const { departments } = useDepartments()
+  const { sprints } = useSprints()
   const activeGoalId = useUIStore((s) => s.activeGoalId)
   const openGoal = useUIStore((s) => s.openGoal)
   const closeGoal = useUIStore((s) => s.closeGoal)
   const activeGoal = goals.find((goal) => goal.id === activeGoalId)
+  const activeSprint = sprints.find((sprint) => sprint.status === 'active')
+  const activeSprintGoalIds = new Set(activeSprint?.goals.map((link) => link.goalId) ?? [])
+  const sprintGoals = goals.filter((goal) => activeSprintGoalIds.has(goal.id))
+  const otherGoals = goals.filter((goal) => !activeSprintGoalIds.has(goal.id))
+  const hasExecution = goals.some((goal) => goal.actions.some((action) => action.status === 'today' || action.status === 'in_progress'))
 
   if (activeGoal) return <GoalWorkbench goal={activeGoal} onBack={closeGoal} />
 
@@ -33,22 +39,21 @@ export function GoalsScreen() {
         <h1 className="font-serif text-3xl">Work</h1>
       </div>
 
-      {goals.length > 0 && <TodayScreen />}
-      <CreateGoalPanel departments={departments} />
       <SprintPanel />
+      <CreateGoalPanel departments={departments} sprintId={activeSprint?.id ?? null} sprintName={activeSprint?.name ?? null} />
+      {hasExecution && <TodayScreen />}
 
-      {loading ? <p className="text-sm text-muted-foreground text-center py-8">Loading goals…</p> : goals.length === 0 ? (
-        <p className="text-sm text-muted-foreground text-center py-8">No goals yet. Create one when you have an outcome to pursue.</p>
-      ) : (
-        <div className="space-y-3">
-          {goals.map((goal) => <GoalRow key={goal.id} goal={goal} onClick={() => openGoal(goal.id)} />)}
-        </div>
+      {loading ? <p className="text-sm text-muted-foreground text-center py-8">Loading…</p> : goals.length === 0 ? null : (
+        <>
+          {activeSprint && <section className="space-y-3"><p className="text-sm text-muted-foreground">{activeSprint.name}</p>{sprintGoals.length > 0 ? <div className="space-y-3">{sprintGoals.map((goal) => <GoalRow key={goal.id} goal={goal} onClick={() => openGoal(goal.id)} />)}</div> : <p className="text-sm text-muted-foreground">Add a goal to this Sprint.</p>}</section>}
+          {otherGoals.length > 0 && <section className="space-y-3"><p className="text-sm text-muted-foreground">Other goals</p><div className="space-y-3">{otherGoals.map((goal) => <GoalRow key={goal.id} goal={goal} onClick={() => openGoal(goal.id)} />)}</div></section>}
+        </>
       )}
     </div>
   )
 }
 
-function CreateGoalPanel({ departments }: { departments: ReturnType<typeof useDepartments>['departments'] }) {
+function CreateGoalPanel({ departments, sprintId, sprintName }: { departments: ReturnType<typeof useDepartments>['departments']; sprintId: string | null; sprintName: string | null }) {
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
   const today = toKey(new Date())
@@ -64,9 +69,9 @@ function CreateGoalPanel({ departments }: { departments: ReturnType<typeof useDe
     if (!effectiveDepartmentId || !title.trim() || !outcome.trim()) return
     setBusy(true)
     try {
-      await store.createGoal({ departmentId: effectiveDepartmentId, title, outcome, startDate: today, targetDate })
+      await store.createGoal({ departmentId: effectiveDepartmentId, title, outcome, startDate: today, targetDate, sprintId })
       setTitle(''); setOutcome(''); setOpen(false)
-      toast.success('Goal created. Define what 100% means next.')
+      toast.success('Goal created')
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Could not create goal')
     } finally { setBusy(false) }
@@ -76,15 +81,15 @@ function CreateGoalPanel({ departments }: { departments: ReturnType<typeof useDe
     <Card className="border-[var(--growth)]/20">
       <CardContent className="p-4 space-y-4">
         {!open ? (
-          <Button variant="outline" className="w-full" onClick={() => setOpen(true)}><CirclePlus className="h-4 w-4 mr-1" /> Create goal</Button>
+          <Button variant="outline" className="w-full" onClick={() => setOpen(true)}><CirclePlus className="h-4 w-4 mr-1" /> {sprintName ? `Add goal to ${sprintName}` : 'Create goal'}</Button>
         ) : (
           <div className="space-y-3">
             <div className="grid sm:grid-cols-2 gap-3">
               <div><Label className="text-[11px]">Department</Label><select value={effectiveDepartmentId} onChange={(e) => setDepartmentId(e.target.value)} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">{departments.map((d) => <option key={d.id} value={d.id}>{d.name.replace('Department of ', '')} · {departmentModule(d.moduleKey).label}</option>)}</select></div>
               <div><Label className="text-[11px]">Target date</Label><Input type="date" min={today} value={targetDate} onChange={(e) => setTargetDate(e.target.value)} /></div>
             </div>
-            <div><Label className="text-[11px]">Goal</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Produce a specific state" /></div>
-            <div><Label className="text-[11px]">Observable outcome</Label><Textarea value={outcome} onChange={(e) => setOutcome(e.target.value)} rows={2} placeholder="What exactly will be true at 100%?" /></div>
+            <div><Label className="text-[11px]">Goal</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="What are you trying to finish?" /></div>
+            <div><Label className="text-[11px]">Done means</Label><Textarea value={outcome} onChange={(e) => setOutcome(e.target.value)} rows={2} placeholder="The result that counts as finished" /></div>
             <div className="flex gap-2"><Button onClick={createCustom} disabled={busy || !title.trim() || !outcome.trim()}>Create goal</Button><Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button></div>
           </div>
         )}
@@ -96,7 +101,6 @@ function CreateGoalPanel({ departments }: { departments: ReturnType<typeof useDe
 function GoalRow({ goal, onClick }: { goal: Goal; onClick: () => void }) {
   const progress = goalProgress(goal)
   const workflow = departmentModule(goal.moduleKey)
-  const openProblems = goal.problems.filter((problem) => problem.status === 'open').length
   const nextActions = goal.actions.filter((action) => !['completed', 'cancelled'].includes(action.status)).length
   return (
     <button onClick={onClick} className="w-full text-left border border-border rounded-lg p-4 hover:border-foreground/25 transition">
@@ -105,7 +109,7 @@ function GoalRow({ goal, onClick }: { goal: Goal; onClick: () => void }) {
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-3"><div><p className="font-serif text-xl">{goal.title}</p><p className="text-xs text-muted-foreground mt-1">{goal.department.name.replace('Department of ', '')} · {workflow.label} · {goal.status}</p></div><ChevronRight className="h-4 w-4 text-muted-foreground mt-1" /></div>
           <div className="flex items-center gap-3 mt-3"><div className="h-1.5 bg-muted rounded-full overflow-hidden flex-1"><div className="h-full bg-[var(--growth)]" style={{ width: `${progress * 100}%` }} /></div><span className="text-sm tabular-nums">{Math.round(progress * 100)}%</span></div>
-          <p className="text-[11px] text-muted-foreground mt-2">{deadlineLabel(daysRemaining(goal.targetDate))} · {openProblems} open gaps · {nextActions} next actions</p>
+          <p className="text-[11px] text-muted-foreground mt-2">{deadlineLabel(daysRemaining(goal.targetDate))} · {nextActions} actions</p>
         </div>
       </div>
     </button>
@@ -121,7 +125,6 @@ function GoalWorkbench({ goal, onBack }: { goal: Goal; onBack: () => void }) {
   return (
     <div className="space-y-5 max-w-3xl mx-auto">
       <Button variant="ghost" size="sm" onClick={onBack}><ArrowLeft className="h-4 w-4 mr-1" /> All work</Button>
-      <TodayScreen />
       <section>
         <div className="flex items-start justify-between gap-4"><div><p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">{workflow.label} workbench</p><h1 className="font-serif text-3xl mt-1">{goal.title}</h1><p className="text-sm text-muted-foreground mt-2">{goal.outcome}</p></div><div className="text-right"><p className="font-serif text-4xl text-[var(--growth)]">{Math.round(progress * 100)}%</p><p className="text-[11px] text-muted-foreground">{deadlineLabel(daysRemaining(goal.targetDate))}</p></div></div>
         <div className="h-2 bg-muted rounded-full overflow-hidden mt-4"><div className="h-full bg-[var(--growth)]" style={{ width: `${progress * 100}%` }} /></div>
@@ -133,7 +136,7 @@ function GoalWorkbench({ goal, onBack }: { goal: Goal; onBack: () => void }) {
       </section>
 
       <div className="grid grid-cols-3 rounded-md border border-border p-1">
-        {(['targets', 'problems', 'actions'] as const).map((value) => <button key={value} onClick={() => setSection(value)} className={cn('rounded px-3 py-2 text-sm capitalize', section === value ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground')}>{value}{value === 'problems' ? ` · ${unresolved.length}` : ''}</button>)}
+        {(['targets', 'problems', 'actions'] as const).map((value) => <button key={value} onClick={() => setSection(value)} className={cn('rounded px-3 py-2 text-sm capitalize', section === value ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground')}>{value === 'problems' ? 'Blockers' : value}{value === 'problems' ? ` · ${unresolved.length}` : ''}</button>)}
       </div>
 
       {section === 'targets' && <TargetsPanel goal={goal} />}
@@ -189,13 +192,11 @@ function ActionsPanel({ goal }: { goal: Goal }) {
   const [done, setDone] = useState('')
   const [minutes, setMinutes] = useState('25')
   const [context, setContext] = useState(workflow.suggestedContexts[0])
-  const [targetId, setTargetId] = useState('')
-  const [problemId, setProblemId] = useState('')
+  const [subdepartmentId, setSubdepartmentId] = useState(goal.department.subdepartments[0]?.id ?? '')
   const [commit, setCommit] = useState(true)
-  const target = goal.targets.find((item) => item.id === targetId)
-  async function add() { try { await store.addGoalAction({ goalId: goal.id, title, definitionOfDone: done, plannedMinutes: Number(minutes), context, targetId: targetId || null, problemId: problemId || null, subdepartmentId: target?.subdepartmentId ?? null, status: commit ? 'today' : 'backlog' }); setTitle(''); setDone('') } catch (error) { toast.error(error instanceof Error ? error.message : 'Could not add action') } }
+  async function add() { try { await store.addGoalAction({ goalId: goal.id, title, definitionOfDone: done || null, plannedMinutes: Number(minutes), context, subdepartmentId: subdepartmentId || null, status: commit ? 'today' : 'backlog' }); setTitle(''); setDone('') } catch (error) { toast.error(error instanceof Error ? error.message : 'Could not add action') } }
   const actions = [...goal.actions].sort((a, b) => statusOrder(a.status) - statusOrder(b.status))
-  return <div className="space-y-3">{actions.map((action) => <div key={action.id} className="border border-border rounded-md p-3 flex items-start gap-3"><div className="flex-1"><p className={cn('text-sm', action.status === 'completed' && 'line-through text-muted-foreground')}>{action.title}</p><p className="text-[11px] text-muted-foreground mt-1">{action.status.replace('_', ' ')} · {action.context} · {action.plannedMinutes}m{action.target ? ` · ${action.target.label}` : ''}</p>{action.definitionOfDone && <p className="text-xs mt-1">Done: {action.definitionOfDone}</p>}</div>{action.status === 'backlog' && <Button size="sm" variant="outline" onClick={() => store.updateGoalAction(action.id, { status: 'today' }).catch((err) => toast.error(err.message))}>Commit today</Button>}</div>)}<Card><CardHeader className="pb-2"><CardTitle className="text-sm">Create the next physical action</CardTitle></CardHeader><CardContent className="space-y-2"><p className="text-xs text-muted-foreground">{workflow.actionPrompt}</p><Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Verb-first action" /><Input value={done} onChange={(e) => setDone(e.target.value)} placeholder={workflow.outputPrompt} /><div className="grid sm:grid-cols-2 gap-2"><select value={targetId} onChange={(e) => setTargetId(e.target.value)} className="h-10 rounded-md border border-input bg-background px-3 text-sm"><option value="">No target</option>{goal.targets.map((target) => <option key={target.id} value={target.id}>{target.label}</option>)}</select><select value={problemId} onChange={(e) => setProblemId(e.target.value)} className="h-10 rounded-md border border-input bg-background px-3 text-sm"><option value="">No linked problem</option>{goal.problems.filter((p) => p.status === 'open').map((p) => <option key={p.id} value={p.id}>{p.statement}</option>)}</select><select value={context} onChange={(e) => setContext(e.target.value)} className="h-10 rounded-md border border-input bg-background px-3 text-sm">{workflow.suggestedContexts.map((value) => <option key={value}>{value}</option>)}</select><Input type="number" min={1} max={720} value={minutes} onChange={(e) => setMinutes(e.target.value)} /></div><label className="flex items-center gap-2 text-xs text-muted-foreground"><input type="checkbox" checked={commit} onChange={(e) => setCommit(e.target.checked)} /> Commit to Today (maximum three)</label><Button onClick={add} disabled={!title.trim() || Number(minutes) <= 0}><Plus className="h-4 w-4 mr-1" /> Add action</Button></CardContent></Card></div>
+  return <div className="space-y-3">{actions.map((action) => <div key={action.id} className="border border-border rounded-md p-3 flex items-start gap-3"><div className="flex-1"><p className={cn('text-sm', action.status === 'completed' && 'line-through text-muted-foreground')}>{action.title}</p><p className="text-[11px] text-muted-foreground mt-1">{action.plannedMinutes}m · {action.context} · {action.status.replace('_', ' ')}</p>{action.definitionOfDone && <p className="text-xs mt-1">{action.definitionOfDone}</p>}</div>{action.status === 'backlog' && <Button size="sm" variant="outline" onClick={() => store.updateGoalAction(action.id, { status: 'today' }).catch((err) => toast.error(err.message))}>Add to now</Button>}</div>)}<Card><CardHeader className="pb-2"><CardTitle className="text-sm">Add action</CardTitle></CardHeader><CardContent className="space-y-2"><div className="grid sm:grid-cols-[1fr_110px] gap-2"><Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="What will you do?" /><Input type="number" min={1} max={720} value={minutes} onChange={(e) => setMinutes(e.target.value)} /></div><Input value={done} onChange={(e) => setDone(e.target.value)} placeholder="Result when done (optional)" /><div className="grid sm:grid-cols-2 gap-2"><select value={subdepartmentId} onChange={(e) => setSubdepartmentId(e.target.value)} className="h-10 rounded-md border border-input bg-background px-3 text-sm"><option value="">No category</option>{goal.department.subdepartments.map((sub) => <option key={sub.id} value={sub.id}>{sub.name}</option>)}</select><select value={context} onChange={(e) => setContext(e.target.value)} className="h-10 rounded-md border border-input bg-background px-3 text-sm">{workflow.suggestedContexts.map((value) => <option key={value}>{value}</option>)}</select></div><label className="flex items-center gap-2 text-xs text-muted-foreground"><input type="checkbox" checked={commit} onChange={(e) => setCommit(e.target.checked)} /> Add to current list</label><Button onClick={add} disabled={!title.trim() || Number(minutes) <= 0}><Plus className="h-4 w-4 mr-1" /> Add action</Button></CardContent></Card></div>
 }
 
 function ModuleIcon({ moduleKey }: { moduleKey: string }) {
