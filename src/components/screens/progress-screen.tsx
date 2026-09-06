@@ -65,8 +65,6 @@ import { HoursBarChart } from '@/components/charts/hours-bar-chart'
 import { CompositionDonut } from '@/components/charts/composition-donut'
 import { StandingsChart, type Standing } from '@/components/charts/standings-chart'
 import { useUIStore, type ProgressMode } from '@/store/ui-store'
-import { TodayScreen } from '@/components/screens/today-screen'
-import { SprintPanel } from '@/components/sprint-panel'
 
 const WINDOW_DAYS: Record<ProgressMode, number> = { dayweek: 7, month: 30, year: 365 }
 
@@ -168,8 +166,6 @@ export function ProgressScreen() {
 
   return (
     <div className="space-y-8">
-      <TodayScreen />
-      <SprintPanel />
       {/* Hero row — GPP left, trailing-30 right, both big, both window-independent */}
       <div className="flex flex-wrap items-start justify-between gap-x-10 gap-y-6">
         <div>
@@ -320,6 +316,17 @@ export function ProgressScreen() {
             <StandingsChart data={standings} onManage={() => setTab('settings')} />
           </CardContent>
         </Card>
+      </section>
+
+      <section className="border-t border-border pt-5 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-medium">Work setup</p>
+          <p className="text-xs text-muted-foreground mt-1">Create work and phases from the Work tab.</p>
+        </div>
+        <div className="flex gap-2">
+          <button type="button" onClick={() => setTab('goals')} className="rounded-md border border-border px-3 py-2 text-sm hover:border-foreground/30 transition">Open Work</button>
+          <button type="button" onClick={() => setTab('goals')} className="rounded-md bg-primary px-3 py-2 text-sm text-primary-foreground hover:opacity-90 transition">Create goal</button>
+        </div>
       </section>
     </div>
   )

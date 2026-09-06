@@ -148,16 +148,18 @@ A Sprint is a multi-day or multi-week phase. It can contain goals from several
 departments and begins with no personal defaults. Education, research, revenue,
 engineering, or any other phase uses the same Sprint model.
 
-## Progress and active work
+## Work and Progress surfaces
 
 Order matters:
 
-1. Active Sprint: dates, phase name, connected goals, and progress.
-2. Running session, if any.
-3. Up to three committed actions with Start controls.
-4. Scope adjustment, recovery, and quick log.
-5. Goal problems that have no next action.
-6. Compact daily evidence: productive, explicitly negative, neutral, unknown.
+The Work tab owns setup and execution: Sprints, goals, the current focus, the
+running session, up to three committed actions, scope adjustment, recovery,
+and quick log. Progress owns GPP, composition, and historical charts. This
+keeps the scoreboard from competing with the work it measures.
+
+The running session shows elapsed time and remaining planned time. Completing,
+interrupting, or abandoning a session records the outcome; interruption keeps
+the action available today, while abandonment returns it to the backlog.
 
 The trillion-dollar GPP panel remains a symbolic scoreboard. It must not pretend
 to be financial output or outrank the active Sprint and next actions.

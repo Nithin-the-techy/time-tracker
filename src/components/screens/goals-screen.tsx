@@ -14,6 +14,8 @@ import { toKey, addDays } from '@/lib/dates'
 import { useUIStore } from '@/store/ui-store'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
+import { SprintPanel } from '@/components/sprint-panel'
+import { TodayScreen } from '@/components/screens/today-screen'
 
 export function GoalsScreen() {
   const { goals, loading } = useGoals()
@@ -28,11 +30,14 @@ export function GoalsScreen() {
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
       <div>
-        <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Desired states</p>
-        <h1 className="font-serif text-3xl mt-1">Goals</h1>
+        <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Plan and execute</p>
+        <h1 className="font-serif text-3xl mt-1">Work</h1>
+        <p className="text-sm text-muted-foreground mt-2">Set outcomes, phases, and the next actions that move them.</p>
       </div>
 
+      <TodayScreen />
       <CreateGoalPanel departments={departments} />
+      <SprintPanel />
 
       {loading ? <p className="text-sm text-muted-foreground text-center py-8">Loading goals…</p> : goals.length === 0 ? (
         <p className="text-sm text-muted-foreground text-center py-8">No goals yet. Create one when you have an outcome to pursue.</p>
@@ -73,7 +78,7 @@ function CreateGoalPanel({ departments }: { departments: ReturnType<typeof useDe
     <Card className="border-[var(--growth)]/20">
       <CardContent className="p-4 space-y-4">
         {!open ? (
-          <Button variant="outline" className="w-full" onClick={() => setOpen(true)}><CirclePlus className="h-4 w-4 mr-1" /> Define another goal</Button>
+          <Button variant="outline" className="w-full" onClick={() => setOpen(true)}><CirclePlus className="h-4 w-4 mr-1" /> Create goal</Button>
         ) : (
           <div className="space-y-3">
             <div className="grid sm:grid-cols-2 gap-3">
@@ -117,7 +122,8 @@ function GoalWorkbench({ goal, onBack }: { goal: Goal; onBack: () => void }) {
 
   return (
     <div className="space-y-5 max-w-3xl mx-auto">
-      <Button variant="ghost" size="sm" onClick={onBack}><ArrowLeft className="h-4 w-4 mr-1" /> All goals</Button>
+      <Button variant="ghost" size="sm" onClick={onBack}><ArrowLeft className="h-4 w-4 mr-1" /> All work</Button>
+      <TodayScreen />
       <section>
         <div className="flex items-start justify-between gap-4"><div><p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">{workflow.label} workbench</p><h1 className="font-serif text-3xl mt-1">{goal.title}</h1><p className="text-sm text-muted-foreground mt-2">{goal.outcome}</p></div><div className="text-right"><p className="font-serif text-4xl text-[var(--growth)]">{Math.round(progress * 100)}%</p><p className="text-[11px] text-muted-foreground">{deadlineLabel(daysRemaining(goal.targetDate))}</p></div></div>
         <div className="h-2 bg-muted rounded-full overflow-hidden mt-4"><div className="h-full bg-[var(--growth)]" style={{ width: `${progress * 100}%` }} /></div>

@@ -70,9 +70,9 @@ export function TodayScreen() {
     return (
       <div className="max-w-xl mx-auto py-12 text-center space-y-4">
         <Target className="h-9 w-9 mx-auto text-[var(--growth)]" />
-        <h1 className="font-serif text-3xl">Choose a state worth producing</h1>
-        <p className="text-sm text-muted-foreground">Time tracking begins after a goal, a gap, and a next action exist.</p>
-        <Button onClick={() => setTab('goals')}>Create the first goal <ArrowRight className="h-4 w-4 ml-1" /></Button>
+        <h1 className="font-serif text-3xl">No active work yet</h1>
+        <p className="text-sm text-muted-foreground">Create a goal, then add one next action to start a session.</p>
+        <Button onClick={() => setTab('goals')}>Create goal <ArrowRight className="h-4 w-4 ml-1" /></Button>
       </div>
     )
   }
@@ -201,9 +201,10 @@ function RunningSession({ session, action, goalTitle }: { session: FocusSession;
             <h2 className="font-serif text-2xl mt-1">{action.title}</h2>
             <p className="text-xs text-muted-foreground mt-1">{goalTitle} · {action.context}</p>
           </div>
-          <div className="text-right"><p className="font-serif text-4xl tabular-nums">{elapsed}m</p><p className="text-[11px] text-muted-foreground">planned {action.plannedMinutes}m</p></div>
+          <div className="text-right"><p className="font-serif text-4xl tabular-nums">{elapsed}m</p><p className="text-[11px] text-muted-foreground">{Math.max(0, action.plannedMinutes - elapsed)}m remaining · planned {action.plannedMinutes}m</p></div>
         </div>
         {action.definitionOfDone && <div className="rounded-md bg-[var(--growth)]/8 border border-[var(--growth)]/20 p-3 text-sm"><CheckCircle2 className="h-4 w-4 inline mr-2" />{action.definitionOfDone}</div>}
+        <div className="h-1.5 rounded-full bg-muted overflow-hidden"><div className="h-full rounded-full bg-[var(--growth)] transition-all" style={{ width: `${Math.min(100, (elapsed / Math.max(1, action.plannedMinutes)) * 100)}%` }} /></div>
         <div className="grid sm:grid-cols-[110px_1fr] gap-3">
           <div><Label className="text-[11px]">Actual minutes</Label><Input type="number" min={1} max={720} value={minutes} onChange={(e) => setMinutes(e.target.value)} /></div>
           <div><Label className="text-[11px]">Result (optional)</Label><Input value={output} onChange={(e) => setOutput(e.target.value)} placeholder="Optional note" /></div>

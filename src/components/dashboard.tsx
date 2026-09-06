@@ -1,6 +1,6 @@
 'use client'
 
-import { LineChart, History, Settings, LogIn, Target } from 'lucide-react'
+import { LineChart, History, Settings, LogIn, BriefcaseBusiness } from 'lucide-react'
 import { useUIStore, type ScreenTab } from '@/store/ui-store'
 import { ProgressScreen } from '@/components/screens/progress-screen'
 import { DatabaseScreen } from '@/components/screens/database-screen'
@@ -11,7 +11,7 @@ import { GoalsScreen } from '@/components/screens/goals-screen'
 
 const TABS: { id: ScreenTab; label: string; icon: React.ElementType }[] = [
   { id: 'progress', label: 'Progress', icon: LineChart },
-  { id: 'goals', label: 'Goals', icon: Target },
+  { id: 'goals', label: 'Work', icon: BriefcaseBusiness },
   { id: 'database', label: 'History', icon: History },
   { id: 'settings', label: 'Settings', icon: Settings },
 ]
@@ -36,7 +36,7 @@ export function Dashboard() {
       <LogFab />
 
       <nav className="sticky bottom-0 z-30 border-t border-border bg-background/95 backdrop-blur">
-        <div className="max-w-5xl mx-auto px-1 py-2 grid grid-cols-5">
+        <div className="max-w-5xl mx-auto px-1 py-2 grid grid-cols-4">
           {TABS.map((t) => (
             <TabButton
               key={t.id}
@@ -82,7 +82,7 @@ function Header() {
       <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
         <div className="flex items-baseline gap-2">
           <span className="font-serif text-lg tracking-tight">Operations</span>
-          <span className="text-muted-foreground text-xs hidden sm:inline">execution system</span>
+          <span className="text-muted-foreground text-xs hidden sm:inline">time and work</span>
         </div>
       </div>
     </header>
