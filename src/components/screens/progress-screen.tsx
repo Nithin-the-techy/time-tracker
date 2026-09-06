@@ -218,7 +218,7 @@ export function ProgressScreen() {
                 <div className="flex items-baseline justify-between mb-2">
                   <p className="text-sm font-medium">Today</p>
                   <p className="text-[11px] text-muted-foreground">
-                    {todayM.productive > 0 ? `${formatMinutes(todayM.productive)} logged` : 'nothing logged yet'}
+                    {todayM.productive > 0 ? `${formatMinutes(todayM.productive)} logged` : 'No records'}
                   </p>
                 </div>
                 <CompositionDonut
@@ -267,7 +267,7 @@ export function ProgressScreen() {
             <CardContent className="p-4">
               <div className="flex items-baseline justify-between mb-2">
                 <p className="text-sm font-medium">Hours by day</p>
-                <p className="text-[11px] text-muted-foreground">last 7 days · stacked productive / neutral / unproductive</p>
+                <p className="text-[11px] text-muted-foreground">last 7 days</p>
               </div>
               <HoursBarChart data={chartData} height={240} />
             </CardContent>

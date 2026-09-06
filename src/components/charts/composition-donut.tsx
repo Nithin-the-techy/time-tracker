@@ -71,20 +71,12 @@ export function CompositionDonut({
   // fake "everything is unproductive" donut.
   if (total === 0) {
     return (
-      <div className={cn('flex flex-col md:flex-row items-center gap-4 min-w-0', className)}>
-        <div className="relative w-full md:w-[46%] shrink-0 flex items-center justify-center" style={{ height }}>
-          <div className="rounded-full border-2 border-dashed border-border/70" style={{ width: '68%', height: '76%' }} />
+      <div className={cn('flex items-center justify-center min-w-0', className)}>
+        <div className="relative w-full shrink-0 flex items-center justify-center" style={{ height: Math.min(height, 150) }}>
+          <div className="rounded-full border-2 border-dashed border-border/70" style={{ width: '120px', height: '120px' }} />
           <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-            <span className="text-[11px] text-muted-foreground/70 text-center leading-tight max-w-[120px]">
-              no data yet
-            </span>
+            <span className="text-xs text-muted-foreground/70">No records</span>
           </div>
-        </div>
-        <div className="w-full md:flex-1 min-w-0">
-          <p className="text-xs text-muted-foreground/70 leading-relaxed">
-            Nothing logged here yet — the chart fills in as you log. Unlogged days stay blank; they are never
-            counted against you.
-          </p>
         </div>
       </div>
     )

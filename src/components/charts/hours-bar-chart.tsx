@@ -36,9 +36,9 @@ export function HoursBarChart({ data, height = 240, color, stacked = true }: Hou
     return (
       <div
         className="flex items-center justify-center text-xs text-muted-foreground/70"
-        style={{ height }}
+        style={{ height: 72 }}
       >
-        Nothing logged in this range yet — bars appear as you log days.
+        No records
       </div>
     )
   }
