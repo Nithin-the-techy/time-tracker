@@ -85,6 +85,16 @@
     font-family: var(--font-plex-sans), system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
   }
+  :where(button, a, input, select, textarea):focus-visible {
+    outline: 2px solid var(--growth);
+    outline-offset: 2px;
+  }
+  :where(button, a):not(:disabled) {
+    transition: color 160ms ease, background-color 160ms ease, border-color 160ms ease, opacity 160ms ease, transform 160ms ease;
+  }
+  :where(button, a):not(:disabled):active {
+    transform: translateY(1px);
+  }
   .font-serif {
     font-family: var(--font-fraunces), Georgia, serif;
     font-feature-settings: "ss01", "ss02";
@@ -94,6 +104,7 @@
     font-size: clamp(2rem, 5vw, 2.75rem);
     line-height: 1;
     letter-spacing: -0.035em;
+    text-wrap: balance;
   }
   .ledger-metric {
     font-family: var(--font-fraunces), Georgia, serif;
@@ -107,4 +118,8 @@
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: oklch(1 0 0 / 10%); border-radius: 4px; }
   ::-webkit-scrollbar-thumb:hover { background: oklch(1 0 0 / 18%); }
+  @media (prefers-reduced-motion: reduce) {
+    :where(button, a):not(:disabled) { transition-duration: 0ms; }
+    :where(button, a):not(:disabled):active { transform: none; }
+  }
 }

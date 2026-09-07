@@ -35,8 +35,8 @@ export function GoalsScreen() {
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <h1 className="ledger-page-title">Work</h1>
-      <SprintPanel />
       <TodayScreen />
+      <SprintPanel />
 
       <section className="space-y-3">
         <div className="flex items-center justify-between gap-3">
@@ -45,7 +45,7 @@ export function GoalsScreen() {
         </div>
 
       {loading ? <p className="text-sm text-muted-foreground text-center py-8">Loading…</p> : visibleGoals.length === 0 ? null : (
-        <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-2">
+        <div className="-mx-1 flex flex-wrap gap-2 px-1 pb-2">
           {[...sprintGoals, ...otherGoals].map((goal) => <OutcomeChip key={goal.id} goal={goal} outsideSprint={Boolean(activeSprint && !activeSprintGoalIds.has(goal.id))} onClick={() => openGoal(goal.id)} />)}
         </div>
       )}
@@ -63,6 +63,7 @@ function CreateGoalPanel({ departments, sprintId, sprintName }: { departments: R
   const [title, setTitle] = useState('')
   const [outcome, setOutcome] = useState('')
   const [targetDate, setTargetDate] = useState(initialTarget)
+  const [attachToSprint, setAttachToSprint] = useState(Boolean(sprintId))
 
   const effectiveDepartmentId = departmentId || departments[0]?.id || ''
 
@@ -70,7 +71,7 @@ function CreateGoalPanel({ departments, sprintId, sprintName }: { departments: R
     if (!effectiveDepartmentId || !title.trim() || !outcome.trim()) return
     setBusy(true)
     try {
-      await store.createGoal({ departmentId: effectiveDepartmentId, title, outcome, startDate: today, targetDate, sprintId })
+      await store.createGoal({ departmentId: effectiveDepartmentId, title, outcome, startDate: today, targetDate, sprintId: attachToSprint ? sprintId : null })
       setTitle(''); setOutcome(''); setOpen(false)
       toast.success('Goal created')
     } catch (error) {
@@ -82,7 +83,7 @@ function CreateGoalPanel({ departments, sprintId, sprintName }: { departments: R
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild><Button variant="outline" size="sm"><CirclePlus className="h-4 w-4 mr-1" /> Add outcome</Button></DialogTrigger>
       <DialogContent className="sm:max-w-xl md:left-[calc(50%+7rem)]">
-        <DialogHeader><DialogTitle>New outcome</DialogTitle><DialogDescription>{sprintName ? `Adds to ${sprintName}` : 'Not attached to a Sprint'}</DialogDescription></DialogHeader>
+        <DialogHeader><DialogTitle>New outcome</DialogTitle><DialogDescription>{attachToSprint && sprintName ? `Adds to ${sprintName}` : 'Can be attached to a Sprint later'}</DialogDescription></DialogHeader>
           <div className="space-y-4">
             <div className="grid sm:grid-cols-2 gap-3">
               <div><Label className="text-xs">Area</Label><select value={effectiveDepartmentId} onChange={(e) => setDepartmentId(e.target.value)} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">{departments.map((d) => <option key={d.id} value={d.id}>{d.name.replace('Department of ', '')}</option>)}</select></div>
@@ -90,6 +91,7 @@ function CreateGoalPanel({ departments, sprintId, sprintName }: { departments: R
             </div>
             <div><Label className="text-xs">Outcome</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Get a 7 in Physics" /></div>
             <div><Label className="text-xs">Finished when</Label><Textarea value={outcome} onChange={(e) => setOutcome(e.target.value)} rows={2} placeholder="What result proves this is done?" /></div>
+            {sprintName && <label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={attachToSprint} onChange={(event) => setAttachToSprint(event.target.checked)} className="mt-0.5" /><span><span className="block">Attach to {sprintName}</span><span className="text-xs text-muted-foreground">You can move this outcome between Sprints later.</span></span></label>}
             <div className="flex gap-2"><Button onClick={createCustom} disabled={busy || !title.trim() || !outcome.trim()}>Add outcome</Button><Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button></div>
           </div>
       </DialogContent>
@@ -101,9 +103,9 @@ function OutcomeChip({ goal, outsideSprint, onClick }: { goal: Goal; outsideSpri
   const progress = goalProgress(goal)
   const state = outcomeState(goal, progress)
   return (
-    <button onClick={onClick} title={`${goal.title} · ${deadlineLabel(daysRemaining(goal.targetDate))}${outsideSprint ? ' · Outside Sprint' : ''}`} className={cn('shrink-0 rounded-full border px-4 py-2 text-sm transition hover:border-foreground/35', state === 'positive' && 'border-[var(--growth)]/45 bg-[var(--growth)]/8', state === 'risk' && 'border-[var(--loss)]/45 bg-[var(--loss)]/8', state === 'neutral' && 'border-border bg-muted/20')}>
+    <button onClick={onClick} title={`${goal.title} · ${deadlineLabel(daysRemaining(goal.targetDate))}${outsideSprint ? ' · Outside Sprint' : ''}`} className={cn('shrink-0 rounded-full border px-4 py-2 text-sm transition hover:border-foreground/35', state === 'positive' && 'border-[var(--growth)]/45 bg-[var(--growth)]/8', state === 'risk' && 'border-[var(--depreciation)]/45 bg-[var(--depreciation)]/8', state === 'neutral' && 'border-border bg-muted/20')}>
       <span className="font-medium">{goal.title}</span>
-      <span className={cn('ml-2 tabular-nums', state === 'positive' ? 'text-[var(--growth)]' : state === 'risk' ? 'text-[var(--loss)]' : 'text-muted-foreground')}>{Math.round(progress * 100)}%</span>
+      <span className={cn('ml-2 tabular-nums', state === 'positive' ? 'text-[var(--growth)]' : state === 'risk' ? 'text-[var(--depreciation)]' : 'text-muted-foreground')}>{Math.round(progress * 100)}%</span>
     </button>
   )
 }

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { CheckCircle2, Clock3, MoreHorizontal, Pause, Play, RotateCcw, Target } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -19,6 +20,9 @@ export function TodayScreen() {
   const { sprints } = useSprints()
   const openGoal = useUIStore((state) => state.openGoal)
   const [busy, setBusy] = useState<string | null>(null)
+  const [showAll, setShowAll] = useState(false)
+  const [resizeAction, setResizeAction] = useState<GoalAction | null>(null)
+  const [resizeMinutes, setResizeMinutes] = useState('')
   const activeSprint = sprints.find((sprint) => sprint.status === 'active')
   const sprintGoalIds = useMemo(() => new Set(activeSprint?.goals.map((link) => link.goalId) ?? []), [activeSprint])
   const committed: StepItem[] = goals
@@ -29,7 +33,8 @@ export function TodayScreen() {
     .find(({ session }) => session.status === 'running')
   const inSprint = activeSprint ? committed.filter(({ goal }) => sprintGoalIds.has(goal.id)) : committed
   const outsideSprint = activeSprint ? committed.filter(({ goal }) => !sprintGoalIds.has(goal.id)) : []
-  const visible = inSprint.slice(0, 3)
+  const compact = inSprint.slice(0, 3)
+  const visible = showAll ? inSprint : compact
 
   async function start(action: GoalAction) {
     setBusy(action.id)
@@ -41,13 +46,23 @@ export function TodayScreen() {
   }
 
   async function resize(action: GoalAction) {
-    const value = window.prompt('How many minutes should this step take?', String(Math.min(action.plannedMinutes, 25)))
-    const minutes = Number(value)
-    if (!Number.isFinite(minutes) || minutes < 1) return
+    setResizeAction(action)
+    setResizeMinutes(String(Math.min(action.plannedMinutes, 25)))
+  }
+
+  async function saveResize() {
+    if (!resizeAction) return
+    const minutes = Number(resizeMinutes)
+    if (!Number.isFinite(minutes) || minutes < 1) {
+      toast.error('Enter at least 1 minute')
+      return
+    }
+    const action = resizeAction
     setBusy(action.id)
     try {
       await store.updateGoalAction(action.id, { plannedMinutes: Math.min(720, Math.round(minutes)), status: 'today' })
       toast.success('Step resized')
+      setResizeAction(null)
     } catch (error) { toast.error(error instanceof Error ? error.message : 'Could not resize step') }
     finally { setBusy(null) }
   }
@@ -67,27 +82,41 @@ export function TodayScreen() {
   }
   if (running) return <RunningSession session={running.session} action={running.action} goalTitle={running.goal.title} />
 
-  const remaining = Math.max(0, inSprint.length - visible.length)
+  const remaining = Math.max(0, inSprint.length - compact.length)
+  const openSteps = goals
+    .filter((goal) => !activeSprint || sprintGoalIds.has(goal.id))
+    .filter((goal) => !['completed', 'abandoned'].includes(goal.status))
+    .reduce((count, goal) => count + goal.actions.filter((action) => !['completed', 'cancelled'].includes(action.status)).length, 0)
+  const committedMinutes = inSprint.reduce((sum, item) => sum + item.action.plannedMinutes, 0)
   const rowProps = { busy, onStart: start, onResize: resize, onBacklog: moveToBacklog }
   return (
-    <LedgerPanel className="border-[var(--growth)]/35">
+    <>
+      <LedgerPanel className="border-[var(--growth)]/35">
       <div className="flex items-baseline justify-between gap-4">
-        <div><LedgerSectionLabel>Committed steps</LedgerSectionLabel><LedgerMeta className="mt-1">{activeSprint ? `Only steps in ${activeSprint.name}` : 'Your next executable work'}</LedgerMeta></div>
-        <span className="text-sm tabular-nums text-muted-foreground">{inSprint.reduce((sum, item) => sum + item.action.plannedMinutes, 0)}m</span>
+        <div><LedgerSectionLabel>Committed steps</LedgerSectionLabel><LedgerMeta className="mt-1">{activeSprint ? `Only steps in ${activeSprint.name}` : 'Your next executable work'}</LedgerMeta><LedgerMeta className="mt-1">{inSprint.length} committed of {openSteps} open steps</LedgerMeta></div>
+        <div className="text-right"><p className="text-sm tabular-nums text-foreground">{committedMinutes}m</p><LedgerMeta>planned</LedgerMeta></div>
       </div>
       <div className="mt-4 space-y-3">
         {visible.length === 0 ? (
           <div className="py-6 text-center"><p className="text-sm text-muted-foreground">{activeSprint ? 'No steps are committed in this Sprint.' : 'No steps are committed yet.'}</p>{activeSprint?.goals[0] && <Button className="mt-3" variant="outline" onClick={() => openGoal(activeSprint.goals[0].goalId)}>Add a step</Button>}</div>
         ) : visible.map((item) => <StepRow key={item.action.id} item={item} {...rowProps} />)}
       </div>
-      {remaining > 0 && <p className="mt-3 text-sm text-muted-foreground">+{remaining} more committed step{remaining === 1 ? '' : 's'}</p>}
+      {remaining > 0 && <Button variant="ghost" size="sm" className="mt-3 px-0 text-muted-foreground" onClick={() => setShowAll((value) => !value)}>{showAll ? 'Show first 3 steps' : `Show ${remaining} more committed step${remaining === 1 ? '' : 's'}`}</Button>}
       {outsideSprint.length > 0 && (
         <details className="mt-4 border-t border-border pt-4">
           <summary className="cursor-pointer text-sm text-muted-foreground">Outside Sprint · {outsideSprint.length}</summary>
           <div className="mt-3 space-y-3">{outsideSprint.map((item) => <StepRow key={item.action.id} item={item} outsideSprint {...rowProps} />)}</div>
         </details>
       )}
-    </LedgerPanel>
+      </LedgerPanel>
+      <Dialog open={Boolean(resizeAction)} onOpenChange={(open) => { if (!open && !busy) setResizeAction(null) }}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader><DialogTitle>Resize step</DialogTitle><DialogDescription>Adjust the planned time without leaving the committed queue.</DialogDescription></DialogHeader>
+          <div><Label htmlFor="resize-minutes">Planned minutes</Label><Input id="resize-minutes" type="number" min={1} max={720} value={resizeMinutes} onChange={(event) => setResizeMinutes(event.target.value)} /></div>
+          <DialogFooter><Button variant="ghost" onClick={() => setResizeAction(null)} disabled={Boolean(busy)}>Cancel</Button><Button onClick={saveResize} disabled={Boolean(busy)}>Save changes</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }
 
@@ -135,7 +164,7 @@ function RunningSession({ session, action, goalTitle }: { session: FocusSession;
       <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-[var(--growth)] transition-all" style={{ width: `${Math.min(100, (elapsed / Math.max(1, action.plannedMinutes)) * 100)}%` }} /></div>
       <div className="mt-4 grid gap-3 sm:grid-cols-[110px_1fr]">
         <div><Label>Actual minutes</Label><Input type="number" min={1} max={720} value={minutes} onChange={(event) => setMinutes(event.target.value)} /></div>
-        <div><div className="flex items-center justify-between"><Label htmlFor="proof">Proof of completion</Label><span className="text-xs text-[var(--loss)]">Required</span></div><Input id="proof" value={output} onChange={(event) => setOutput(event.target.value)} placeholder="One line of proof this happened" /></div>
+        <div><div className="flex items-center justify-between"><Label htmlFor="proof">Proof of completion</Label><span className="text-xs text-[var(--depreciation)]">Required</span></div><Input id="proof" value={output} onChange={(event) => setOutput(event.target.value)} placeholder="One line of proof this happened" /></div>
       </div>
       <div className="mt-3"><Label>Friction or interruption <span className="font-normal text-muted-foreground">(optional)</span></Label><Textarea value={friction} onChange={(event) => setFriction(event.target.value)} rows={2} /></div>
       <div className="mt-4 flex flex-wrap gap-2">

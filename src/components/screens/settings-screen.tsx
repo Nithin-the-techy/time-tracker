@@ -52,7 +52,10 @@ export function SettingsScreen() {
 
   return (
     <div className="space-y-6 pb-20 max-w-2xl">
-      <h1 className="font-serif text-2xl">Settings</h1>
+      <div>
+        <h1 className="ledger-page-title">Settings</h1>
+        <p className="mt-2 text-sm text-muted-foreground">Shape the ledger without changing the records it contains.</p>
+      </div>
 
       <DepartmentModulesCard departments={departments} />
 

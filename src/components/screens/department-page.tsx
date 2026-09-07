@@ -84,7 +84,7 @@ export function DepartmentPage({ slug }: { slug: string }) {
             className="inline-block h-3 w-3 rounded-full"
             style={{ backgroundColor: DEPARTMENT_COLORS[dept.slug] ?? '#888' }}
           />
-          <h1 className="font-serif text-xl">{dept.name}</h1>
+          <h1 className="ledger-page-title text-2xl">{dept.name}</h1>
         </div>
       </div>
 
@@ -107,21 +107,21 @@ export function DepartmentPage({ slug }: { slug: string }) {
         <Card>
           <CardContent className="p-4">
             <p className="text-xs text-muted-foreground">Logged</p>
-            <p className="text-2xl font-serif mt-1 tabular-nums">{formatHours(totalMinutes)}</p>
+            <p className="ledger-metric mt-1 text-2xl">{formatHours(totalMinutes)}</p>
             <p className="text-xs text-muted-foreground mt-0.5">{formatMinutes(totalMinutes)}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
             <p className="text-xs text-muted-foreground">Days active</p>
-            <p className="text-2xl font-serif mt-1 tabular-nums">{daysActive}</p>
+            <p className="ledger-metric mt-1 text-2xl">{daysActive}</p>
             <p className="text-xs text-muted-foreground mt-0.5">in range</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
             <p className="text-xs text-muted-foreground">Sub-departments</p>
-            <p className="text-2xl font-serif mt-1 tabular-nums">{subdepartments.length}</p>
+            <p className="ledger-metric mt-1 text-2xl">{subdepartments.length}</p>
             <p className="text-xs text-muted-foreground mt-0.5">{subShares.length} active</p>
           </CardContent>
         </Card>

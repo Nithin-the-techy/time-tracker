@@ -164,7 +164,14 @@ export function ProgressScreen() {
   const hoursTitle = mode === 'dayweek' ? 'Hours by day' : mode === 'month' ? 'Hours by week' : 'Hours by month'
 
   return (
-    <div className="mx-auto max-w-5xl space-y-8">
+    <div className="mx-auto max-w-5xl space-y-7">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="ledger-page-title">Progress</h1>
+          <p className="mt-2 text-sm text-muted-foreground">A record of where your time went.</p>
+        </div>
+        <ModeSwitch value={mode} onChange={setProgressMode} />
+      </div>
       {/* Hero row — GPP left, trailing-30 right, both big, both window-independent */}
       <div className="flex flex-wrap items-start justify-between gap-x-10 gap-y-6">
         <div>
@@ -202,11 +209,6 @@ export function ProgressScreen() {
             <p className="text-xs text-muted-foreground mt-1.5">No productive time in this window</p>
           )}
         </div>
-      </div>
-
-      {/* Window switch — affects the charts below only, never the hero */}
-      <div className="flex justify-end">
-        <ModeSwitch value={mode} onChange={setProgressMode} />
       </div>
 
       {/* Unified composition: donut(s) + stacked bars */}
