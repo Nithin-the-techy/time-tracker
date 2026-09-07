@@ -15,7 +15,7 @@ The application starts empty of personal goals and Sprints. Exams, research, rev
 ## Product claim
 
 Operations is not a diary of time already lost. It is a single-user execution
-system that helps the user choose the right next action, begin it, produce an
+system that helps the user choose the right next step, begin it, produce an
 observable result, recover quickly after avoidance, and learn from the evidence.
 
 It should orchestrate almost the entire execution loop. It cannot honestly
@@ -25,12 +25,12 @@ blocking and environmental enforcement remain external layers.
 ## The execution loop
 
 ```text
-Goal -> measurable targets -> current gaps/problems -> next actions
-     -> focus session -> output/evidence -> target progress -> review
-                                      \-> interruption/recovery -> next action
+Outcome -> measurable targets -> current gaps/problems -> next steps
+        -> focus session -> output/evidence -> target progress -> review
+                                         \-> interruption/recovery -> next step
 ```
 
-The default screen answers only three questions:
+The Work screen answers only three questions:
 
 1. What matters now?
 2. What is the smallest concrete action I can start?
@@ -55,7 +55,7 @@ Modules are presentation and workflow adapters. They do not create separate
 goal tables or incompatible systems. A new module can be added in code without
 migrating every goal.
 
-### Goal
+### Outcome (stored as `Goal`)
 
 A desired state inside a department.
 
@@ -101,13 +101,13 @@ A current gap that prevents a goal from reaching 100%.
 - concise statement;
 - severity and status;
 - optional target it blocks;
-- next action;
+- next step;
 - evidence that would count as solved.
 
-Problems are not journal entries. Open problems without a next action appear as
+Problems are not journal entries. Open problems without a next step appear as
 unresolved and block the goal's readiness indicator.
 
-### Action
+### Step (stored as `GoalAction`)
 
 An executable unit of work.
 
@@ -119,7 +119,7 @@ An executable unit of work.
 - status and sort order;
 - definition of done / expected output.
 
-The active-work list shows at most three committed actions. A backlog may be
+The active-work list shows at most three committed steps. A backlog may be
 large; the commitment list may not.
 
 ### Focus session
@@ -127,10 +127,11 @@ large; the commitment list may not.
 An intentional start/stop record linked to an action. A session can be running,
 completed, interrupted, or abandoned.
 
-On start, the UI shows the action, optional expected output, elapsed time, and
-stop controls. On stop, actual minutes and an optional result may be recorded.
-Completed focus sessions create productive time entries so the existing
-analytics remain useful.
+On start, the UI shows the step, optional expected output, elapsed time, and
+stop controls. Completing a session requires one concise line of proof; the UI
+must label this requirement before submission. Interrupted or abandoned
+sessions may record optional friction without fake evidence. Completed focus
+sessions create productive time entries so the existing analytics remain useful.
 
 ### Check-in and recovery
 
@@ -150,19 +151,21 @@ engineering, or any other phase uses the same Sprint model.
 
 ## Work and Progress surfaces
 
-Order matters:
+Order and ownership both matter:
 
-The Work tab owns setup and execution: Sprints, goals, the current focus, the
-running session, up to three committed actions, scope adjustment, recovery,
-and quick log. Progress owns GPP, composition, and historical charts. This
-keeps the scoreboard from competing with the work it measures.
+Progress is the first tab and default landing view. It owns GPP, composition,
+and historical charts. Work is the second tab and owns setup and execution:
+Sprints, outcomes, the current focus, the running session, up to three
+committed steps, scope adjustment, and recovery. The two views share data but
+must not duplicate controls or create competing sources of truth.
 
 The running session shows elapsed time and remaining planned time. Completing,
 interrupting, or abandoning a session records the outcome; interruption keeps
 the action available today, while abandonment returns it to the backlog.
 
 The trillion-dollar GPP panel remains a symbolic scoreboard. It must not pretend
-to be financial output or outrank the active Sprint and next actions.
+to be financial output. Inside Work, the active session or committed-step queue
+must remain visually dominant.
 
 ## Time-accounting truth rules
 
@@ -203,7 +206,7 @@ to be financial output or outrank the active Sprint and next actions.
 ### Slice 1: complete goal-to-action loop
 
 - Add department modules, goals, targets, problems, actions, and focus sessions.
-- Add APIs, export/import support, cache hooks, and a Today screen.
+- Add APIs, export/import support, cache hooks, and a committed-step execution view.
 - Add reusable goal editor; configure the exam sprint through normal UI/data.
 - Starting and completing an action must work end-to-end and create evidence.
 
@@ -229,8 +232,8 @@ to be financial output or outrank the active Sprint and next actions.
 
 1. A custom department can choose or change an operating module.
 2. A user can create an Education goal and add arbitrary subject targets.
-3. A user can write a problem, attach a next action, and see it on Today.
-4. A user can commit up to three Today actions.
+3. A user can write a problem, attach a step, and see it in committed steps.
+4. A user can commit up to three primary steps.
 5. Start persists a running focus session across refreshes.
 6. Finish records duration and output and advances linked progress.
 7. A session-created time entry appears in the existing Database analytics.
