@@ -80,7 +80,7 @@ export function SprintPanel() {
     if (!editableSprint || !goalId || busy) return
     setBusy(true)
     try {
-      await store.updateSprint(editableSprint.id, { goalIds: [...editableSprint.goals.map((link) => link.goalId), goalId] })
+      await store.moveGoalToSprint(goalId, editableSprint.id)
       setGoalId(''); toast.success('Outcome added to Sprint')
     } catch (error) { toast.error(error instanceof Error ? error.message : 'Could not add outcome') }
     finally { setBusy(false) }
@@ -114,8 +114,7 @@ export function SprintPanel() {
     if (!target) return
     setBusy(true)
     try {
-      await store.updateSprint(target.id, { goalIds: [...target.goals.map((link) => link.goalId), goalIdToMove] })
-      await store.updateSprint(editableSprint.id, { goalIds: editableSprint.goals.filter((link) => link.goalId !== goalIdToMove).map((link) => link.goalId) })
+      await store.moveGoalToSprint(goalIdToMove, target.id)
       setMoveTargetByGoal((current) => ({ ...current, [goalIdToMove]: '' })); toast.success(`Outcome moved to ${target.name}`)
     } catch (error) { toast.error(error instanceof Error ? error.message : 'Could not move outcome') }
     finally { setBusy(false) }
@@ -127,7 +126,7 @@ export function SprintPanel() {
 
   if (loading) return <div className="h-28 animate-pulse rounded-lg border border-border bg-muted/20" />
   return <section className="space-y-3" aria-labelledby="sprints-heading">
-    <div className="flex items-end justify-between gap-4"><div><LedgerSectionLabel id="sprints-heading">Sprints</LedgerSectionLabel><LedgerMeta className="mt-1">One current window keeps today&apos;s queue focused. Other windows wait below.</LedgerMeta></div><Button variant="outline" size="sm" onClick={() => openEditor(null, true)}><Plus className="h-4 w-4" /> Add Sprint</Button></div>
+    <div className="flex items-end justify-between gap-4"><div><LedgerSectionLabel id="sprints-heading">Sprints</LedgerSectionLabel><LedgerMeta className="mt-1">One current window. Other Sprints wait.</LedgerMeta></div><Button variant="outline" size="sm" onClick={() => openEditor(null, true)}><Plus className="h-4 w-4" /> Add Sprint</Button></div>
 
     {active ? <button type="button" onClick={() => openEditor(active)} className="group flex w-full items-center gap-4 rounded-lg border border-[var(--growth)]/40 bg-[var(--growth)]/[0.05] p-5 text-left transition hover:border-[var(--growth)]/70 hover:-translate-y-px"><CalendarRange className="h-5 w-5 shrink-0 text-[var(--growth)]" /><span className="min-w-0 flex-1"><span className="block text-xs font-medium text-[var(--growth)]">Current Sprint</span><span className="mt-1 block truncate text-base font-semibold">{active.name}</span>{active.phase && <span className="mt-1 block truncate text-sm text-muted-foreground">{active.phase}</span>}</span><span className="text-right"><span className="block text-sm tabular-nums text-foreground">{deadlineLabel(daysRemaining(active.endDate))}</span><span className="mt-1 block text-xs text-muted-foreground">{active.goals.length} outcome{active.goals.length === 1 ? '' : 's'} · edit window</span></span><ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground transition group-hover:translate-x-0.5" /></button> : <button type="button" onClick={() => openEditor(null, true)} className="flex w-full items-center gap-4 rounded-lg border border-dashed border-border p-5 text-left transition hover:border-foreground/35"><CalendarRange className="h-5 w-5 text-[var(--growth)]" /><span><span className="block text-sm font-semibold">Create your first Sprint</span><span className="mt-1 block text-sm text-muted-foreground">Give the next execution window a name and end date.</span></span></button>}
 

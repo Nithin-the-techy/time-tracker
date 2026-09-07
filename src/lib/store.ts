@@ -523,6 +523,11 @@ export const store = {
     await this.loadSprints()
   },
 
+  async moveGoalToSprint(goalId: string, sprintId: string) {
+    await patchJson(`/api/sprints/${sprintId}`, { moveGoalId: goalId })
+    await Promise.all([this.loadSprints(), this.loadGoals()])
+  },
+
   async createGoal(input: {
     departmentId: string
     title: string

@@ -539,7 +539,7 @@ export function LogForm({ presetDepartmentId, onSaved }: LogFormProps) {
       )}
       {kind === 'negative' && (
         <p className="text-[11px] text-muted-foreground -mt-2">
-          Negative time counts only when you explicitly log it. Unknown time is never silently
+          Negative time counts only when you explicitly log it. Unlogged time is never silently
           treated as failure.
         </p>
       )}

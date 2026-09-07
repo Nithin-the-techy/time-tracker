@@ -101,7 +101,7 @@ export function HoursBarChart({ data, height = 240, color, stacked = true }: Hou
         </span>
         <span className="inline-flex items-center gap-1.5">
           <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: CHART_COLORS.unknown }} />
-          Unknown
+          Unlogged
         </span>
       </div>
       <div style={{ height }}>
@@ -131,7 +131,7 @@ export function HoursBarChart({ data, height = 240, color, stacked = true }: Hou
             <Bar dataKey="productive" stackId="t" fill={CHART_COLORS.productive} maxBarSize={44} isAnimationActive={false} name="Productive" />
             <Bar dataKey="neutral" stackId="t" fill={CHART_COLORS.neutral} maxBarSize={44} isAnimationActive={false} name="Neutral" />
             <Bar dataKey="unproductive" stackId="t" fill={CHART_COLORS.unproductive} maxBarSize={44} isAnimationActive={false} name="Explicit negative" />
-            <Bar dataKey="unknown" stackId="t" fill={CHART_COLORS.unknown} radius={[3, 3, 0, 0]} maxBarSize={44} isAnimationActive={false} name="Unknown" />
+            <Bar dataKey="unknown" stackId="t" fill={CHART_COLORS.unknown} radius={[3, 3, 0, 0]} maxBarSize={44} isAnimationActive={false} name="Unlogged" />
           </BarChart>
         </ResponsiveContainer>
       </div>

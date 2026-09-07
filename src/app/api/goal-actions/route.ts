@@ -34,6 +34,10 @@ export async function POST(req: NextRequest) {
   const dueDate = body.dueDate ? String(body.dueDate) : null
   if (dueDate && !DATE_KEY.test(dueDate)) return NextResponse.json({ error: 'invalid due date' }, { status: 400 })
 
+  if (status === 'today') {
+    const committedCount = await db.goalAction.count({ where: { status: { in: ['today', 'in_progress'] } } })
+    if (committedCount >= 3) return NextResponse.json({ error: 'Today’s queue is full. Move a step to backlog first.' }, { status: 409 })
+  }
   const todayOrder = status === 'today'
     ? await db.goalAction.count({ where: { status: { in: ['today', 'in_progress'] } } })
     : null
@@ -75,6 +79,8 @@ export async function PATCH(req: NextRequest) {
     const status = String(body.status)
     if (!STATUSES.has(status)) return NextResponse.json({ error: 'invalid status' }, { status: 400 })
     if (status === 'today' && existing.status !== 'today' && existing.status !== 'in_progress') {
+      const committedCount = await db.goalAction.count({ where: { status: { in: ['today', 'in_progress'] } } })
+      if (committedCount >= 3) return NextResponse.json({ error: 'Today’s queue is full. Move a step to backlog first.' }, { status: 409 })
       data.todayOrder = await db.goalAction.count({ where: { status: { in: ['today', 'in_progress'] } } })
     }
     if (status === 'backlog' || status === 'completed' || status === 'cancelled') data.todayOrder = null

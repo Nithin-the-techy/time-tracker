@@ -77,7 +77,7 @@ export function ProgressScreen() {
 
   const mode = useUIStore((s) => s.progressMode)
   const setProgressMode = useUIStore((s) => s.setProgressMode)
-  const setTab = useUIStore((s) => s.setTab)
+  const openSettingsSection = useUIStore((s) => s.openSettingsSection)
 
   const days = WINDOW_DAYS[mode]
   const winFrom = toKey(addDays(now, -(days - 1)))
@@ -168,7 +168,7 @@ export function ProgressScreen() {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="ledger-page-title">Progress</h1>
-          <p className="mt-2 text-sm text-muted-foreground">A record of where your time went.</p>
+          <p className="mt-2 text-sm text-muted-foreground">Recorded time at a glance.</p>
         </div>
         <ModeSwitch value={mode} onChange={setProgressMode} />
       </div>
@@ -176,7 +176,7 @@ export function ProgressScreen() {
       <div className="flex flex-wrap items-start justify-between gap-x-10 gap-y-6">
         <div>
           <p className="text-sm text-muted-foreground mb-1" title={GPP_TOOLTIP}>
-            GPP / month equivalent
+            GPP / month · symbolic
           </p>
           <div className="flex items-baseline gap-3 flex-wrap">
             <h1 className="ledger-metric text-6xl text-[var(--growth)]">
@@ -189,7 +189,7 @@ export function ProgressScreen() {
             month · {formatHours(g.avgPerDayMinutes)}/day across {g.daysTracked} tracked {g.daysTracked === 1 ? 'day' : 'days'}
           </p>
           <p className="text-xs text-muted-foreground/70 mt-0.5">
-            {formatGoalPercent(g.goalPercent)} of the $1T/month reference · on pace for {formatMoney(g.annualDollars)} a year
+            {formatGoalPercent(g.goalPercent)} of the $1T/month target · on pace for {formatMoney(g.annualDollars)} a year
           </p>
         </div>
 
@@ -306,10 +306,10 @@ export function ProgressScreen() {
 
       {/* Standings — monthly GPP, same treatment for everyone */}
       <section>
-        <p className="text-sm text-muted-foreground mb-3">Standings · monthly GPP</p>
+        <p className="text-sm text-muted-foreground mb-3">Standings · symbolic GPP</p>
         <Card>
           <CardContent className="p-4">
-            <StandingsChart data={standings} onManage={() => setTab('settings')} />
+            <StandingsChart data={standings} onManage={() => openSettingsSection('rivals')} />
           </CardContent>
         </Card>
       </section>

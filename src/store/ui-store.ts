@@ -14,6 +14,7 @@ export type ScreenTab = 'goals' | 'progress' | 'database' | 'settings'
 // Which window the Progress tab shows. 'dayweek' combines the current day
 // with the rolling last-7-days; month/year are rolling 30/365-day windows.
 export type ProgressMode = 'dayweek' | 'month' | 'year'
+export type SettingsFocus = 'rivals' | 'backup' | null
 
 interface UIState {
   tab: ScreenTab
@@ -21,6 +22,10 @@ interface UIState {
 
   progressMode: ProgressMode
   setProgressMode: (m: ProgressMode) => void
+
+  settingsFocus: SettingsFocus
+  openSettingsSection: (section: Exclude<SettingsFocus, null>) => void
+  clearSettingsFocus: () => void
 
   activeDeptSlug: string | null
   openDeptPage: (slug: string) => void
@@ -77,6 +82,10 @@ export const useUIStore = create<UIState>((set) => ({
 
   progressMode: 'dayweek',
   setProgressMode: (m) => set({ progressMode: m }),
+
+  settingsFocus: null,
+  openSettingsSection: (section) => set({ tab: 'settings', settingsFocus: section }),
+  clearSettingsFocus: () => set({ settingsFocus: null }),
 
   activeDeptSlug: null,
   openDeptPage: (slug) => set({

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -11,6 +11,7 @@ import { DEPARTMENT_COLORS } from '@/lib/constants'
 import { NeutralBaselineManager } from '@/components/neutral-baseline-manager'
 import { toast } from 'sonner'
 import { DEPARTMENT_MODULES, type DepartmentModuleKey } from '@/lib/department-modules'
+import { useUIStore } from '@/store/ui-store'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,6 +28,15 @@ export function SettingsScreen() {
   const { departments } = useDepartments()
   const { rivals } = useRivals()
   const fileRef = useRef<HTMLInputElement>(null)
+  const settingsFocus = useUIStore((state) => state.settingsFocus)
+  const clearSettingsFocus = useUIStore((state) => state.clearSettingsFocus)
+
+  useEffect(() => {
+    if (!settingsFocus) return
+    const target = document.getElementById(`settings-${settingsFocus}`)
+    target?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    clearSettingsFocus()
+  }, [settingsFocus, clearSettingsFocus])
 
   function importJSON(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -55,7 +65,7 @@ export function SettingsScreen() {
       <div>
         <p className="text-sm text-[var(--growth)]">System</p>
         <h1 className="ledger-page-title mt-1">Settings</h1>
-        <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">Keep the measurement rules, categories, comparisons, and backups understandable. These controls change the system around your records.</p>
+        <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">Rules, categories, comparisons, and backups.</p>
       </div>
 
       <DepartmentModulesCard departments={departments} />
@@ -65,8 +75,7 @@ export function SettingsScreen() {
         <CardHeader>
           <CardTitle className="text-sm">Sleep &amp; neutral baseline</CardTitle>
           <CardDescription>
-            Neutral = sleep + everything else that isn&apos;t work or waste. Correct a specific day
-            without inventing defaults; every total and chart follows.
+            Sleep, meals, and chores. Correct a day only when you know the time.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -79,23 +88,21 @@ export function SettingsScreen() {
         <CardHeader>
           <CardTitle className="text-sm">Sub-department weights</CardTitle>
           <CardDescription>
-            Multiplier per sub-department (0.1–5.0, default 1.0). Kept for reference and rival
-            estimates — the hours and GPP figures elsewhere use plain logged time. Every change is
-            recorded in the audit log.
+            Reference multipliers for rival estimates. Logged hours and GPP stay unchanged.
           </CardDescription>
         </CardHeader>
         <CardContent>
           {departments.length === 0 ? (
             <p className="text-sm text-muted-foreground">Loading…</p>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-2">
               {departments.map((d) => (
                 <div key={d.id}>
-                  <div className="flex items-center gap-2 mb-2">
+                  <div className="flex items-center gap-2 mb-1">
                     <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: DEPARTMENT_COLORS[d.slug] ?? '#888' }} />
                     <span className="font-serif text-sm">{d.name}</span>
                   </div>
-                  <div className="space-y-1.5 pl-5">
+                  <div className="space-y-1 pl-5">
                     {d.subdepartments.length === 0 && (
                       <p className="text-xs text-muted-foreground">No sub-departments. Add one in the Sub-departments card below.</p>
                     )}
@@ -121,7 +128,7 @@ export function SettingsScreen() {
         <CardHeader>
           <CardTitle className="text-sm">Sub-departments</CardTitle>
           <CardDescription>
-            Add or archive sub-departments. The 9 top-level departments stay fixed; everything under them is editable.
+            Add or archive categories under each department.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -140,12 +147,11 @@ export function SettingsScreen() {
       </Card>
 
       {/* Rivals */}
-      <Card>
+      <Card id="settings-rivals">
         <CardHeader>
           <CardTitle className="text-sm">Rivals</CardTitle>
           <CardDescription>
-            Peers to compare against. Estimate their weekly minutes per sub-department; standings
-            rank everyone by monthly GPP (hours shown alongside) on equal footing.
+            Compare time by category. Standings use the same symbolic GPP scale.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -160,11 +166,11 @@ export function SettingsScreen() {
       </Card>
 
       {/* Backup */}
-      <Card>
+      <Card id="settings-backup">
         <CardHeader>
           <CardTitle className="text-sm">Backup</CardTitle>
           <CardDescription>
-            Export a JSON snapshot of all data. Import it on another device to restore. Data lives on the server; this is a manual backup.
+            Export or import a JSON snapshot of your records.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-2">

@@ -47,7 +47,7 @@ export function TodayScreen() {
 
   async function resize(action: GoalAction) {
     setResizeAction(action)
-    setResizeMinutes(String(Math.min(action.plannedMinutes, 25)))
+    setResizeMinutes(String(action.plannedMinutes))
   }
 
   async function saveResize() {
@@ -78,7 +78,7 @@ export function TodayScreen() {
 
   if (loading) return <p className="py-12 text-center text-sm text-muted-foreground">Loading work…</p>
   if (!goals.some((goal) => goal.status === 'active')) {
-    return <LedgerPanel className="text-center"><Target className="mx-auto h-8 w-8 text-[var(--growth)]" /><LedgerSectionLabel className="mt-3">No active outcomes</LedgerSectionLabel><LedgerMeta className="mt-1">Create an outcome, then add its first step.</LedgerMeta></LedgerPanel>
+    return <LedgerPanel className="text-center"><Target className="mx-auto h-8 w-8 text-[var(--growth)]" /><LedgerSectionLabel className="mt-3">No active outcomes</LedgerSectionLabel><LedgerMeta className="mt-1">Add a Sprint outcome first.</LedgerMeta></LedgerPanel>
   }
   if (running) return <RunningSession session={running.session} action={running.action} goalTitle={running.goal.title} />
 
@@ -93,15 +93,15 @@ export function TodayScreen() {
     <>
       <LedgerPanel className="border-[var(--growth)]/35">
       <div className="flex items-baseline justify-between gap-4">
-        <div><LedgerSectionLabel>Today&apos;s queue</LedgerSectionLabel><LedgerMeta className="mt-1">{activeSprint ? `Planned steps in ${activeSprint.name}` : 'Steps you chose to act on today'}</LedgerMeta><LedgerMeta className="mt-1">{inSprint.length} planned of {openSteps} open steps</LedgerMeta></div>
+        <div><LedgerSectionLabel>Today&apos;s queue</LedgerSectionLabel><LedgerMeta className="mt-1">{activeSprint ? activeSprint.name : 'Planned steps'}</LedgerMeta><LedgerMeta className="mt-1">{inSprint.length} planned of {openSteps} open steps</LedgerMeta></div>
         <div className="text-right"><p className="text-sm tabular-nums text-foreground">{committedMinutes}m</p><LedgerMeta>planned</LedgerMeta></div>
       </div>
       <div className="mt-4 space-y-3">
         {visible.length === 0 ? (
-          <div className="py-6 text-center"><p className="text-sm text-muted-foreground">{activeSprint ? 'No steps are committed in this Sprint.' : 'No steps are committed yet.'}</p>{activeSprint?.goals[0] && <Button className="mt-3" variant="outline" onClick={() => openGoal(activeSprint.goals[0].goalId)}>Add a step</Button>}</div>
+          <div className="py-6 text-center"><p className="text-sm text-muted-foreground">{activeSprint ? 'No steps planned for this Sprint today.' : 'No steps planned today.'}</p>{activeSprint?.goals[0] && <Button className="mt-3" variant="outline" onClick={() => openGoal(activeSprint.goals[0].goalId)}>Add a step</Button>}</div>
         ) : visible.map((item) => <StepRow key={item.action.id} item={item} {...rowProps} />)}
       </div>
-      <LedgerMeta className="mt-4 border-t border-border pt-3">Plan a step for today when you intend to work on it. Start step when you begin. Use Log time for work that was never planned here.</LedgerMeta>
+      <LedgerMeta className="mt-4 border-t border-border pt-3">Queue = planned today · Log time = unplanned work.</LedgerMeta>
       {remaining > 0 && <Button variant="ghost" size="sm" className="mt-3 px-0 text-muted-foreground" onClick={() => setShowAll((value) => !value)}>{showAll ? 'Show first 3 steps' : `Show ${remaining} more planned step${remaining === 1 ? '' : 's'}`}</Button>}
       {outsideSprint.length > 0 && (
         <details className="mt-4 border-t border-border pt-4">
@@ -112,7 +112,7 @@ export function TodayScreen() {
       </LedgerPanel>
       <Dialog open={Boolean(resizeAction)} onOpenChange={(open) => { if (!open && !busy) setResizeAction(null) }}>
         <DialogContent className="sm:max-w-sm">
-          <DialogHeader><DialogTitle>Resize step</DialogTitle><DialogDescription>Adjust the planned time without leaving the committed queue.</DialogDescription></DialogHeader>
+          <DialogHeader><DialogTitle>Resize step</DialogTitle><DialogDescription>Change the planned minutes.</DialogDescription></DialogHeader>
           <div><Label htmlFor="resize-minutes">Planned minutes</Label><Input id="resize-minutes" type="number" min={1} max={720} value={resizeMinutes} onChange={(event) => setResizeMinutes(event.target.value)} /></div>
           <DialogFooter><Button variant="ghost" onClick={() => setResizeAction(null)} disabled={Boolean(busy)}>Cancel</Button><Button onClick={saveResize} disabled={Boolean(busy)}>Save changes</Button></DialogFooter>
         </DialogContent>
@@ -150,7 +150,7 @@ function RunningSession({ session, action, goalTitle }: { session: FocusSession;
     setFinishing(true)
     try {
       await store.finishFocusSession({ sessionId: session.id, actualMinutes: Math.max(1, Number(minutes)), output, friction, outcome })
-      toast.success(outcome === 'completed' ? 'Step finished. Proof recorded.' : outcome === 'interrupted' ? 'Step kept committed.' : 'Step moved to backlog.')
+    toast.success(outcome === 'completed' ? 'Step finished.' : outcome === 'interrupted' ? "Step paused; kept in today's queue." : 'Step moved to backlog.')
     } catch (error) { toast.error(error instanceof Error ? error.message : 'Could not finish step') }
     finally { setFinishing(false) }
   }

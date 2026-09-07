@@ -18,7 +18,7 @@ const LAYERS = [
   { key: 'productive', label: 'Productive', color: CHART_COLORS.productive },
   { key: 'neutral', label: 'Neutral', color: CHART_COLORS.neutral },
   { key: 'unproductive', label: 'Explicit negative', color: CHART_COLORS.unproductive },
-  { key: 'unknown', label: 'Unknown', color: CHART_COLORS.unknown },
+  { key: 'unknown', label: 'Unlogged', color: CHART_COLORS.unknown },
 ] as const
 
 export function CompositionBar({ data }: { data: Composition }) {

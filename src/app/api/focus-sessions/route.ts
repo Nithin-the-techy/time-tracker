@@ -37,10 +37,6 @@ async function finishSession(body: Record<string, unknown>) {
   if (!['completed', 'interrupted', 'abandoned'].includes(outcome)) {
     return NextResponse.json({ error: 'invalid session outcome' }, { status: 400 })
   }
-  if (outcome === 'completed' && !output) {
-    return NextResponse.json({ error: 'Add one line of proof before finishing this step' }, { status: 400 })
-  }
-
   const session = await db.focusSession.findUnique({
     where: { id: sessionId },
     include: { action: { include: { goal: true, target: true } } },

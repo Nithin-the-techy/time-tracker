@@ -19,9 +19,20 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (data.startDate && !DATE_KEY.test(data.startDate)) return NextResponse.json({ error: 'invalid start date' }, { status: 400 })
   if (data.endDate && !DATE_KEY.test(data.endDate)) return NextResponse.json({ error: 'invalid end date' }, { status: 400 })
   const goalIds = Array.isArray(body.goalIds) ? body.goalIds.map(String).filter(Boolean) : null
+  const moveGoalId = body.moveGoalId ? String(body.moveGoalId) : null
+
+  if (moveGoalId) {
+    const goal = await db.goal.findUnique({ where: { id: moveGoalId }, select: { id: true } })
+    if (!goal) return NextResponse.json({ error: 'outcome not found' }, { status: 400 })
+  }
 
   const sprint = await db.$transaction(async (tx) => {
     if (data.status === 'active') await tx.sprint.updateMany({ where: { status: 'active', id: { not: id } }, data: { status: 'paused' } })
+    if (moveGoalId) {
+      await tx.sprintGoal.deleteMany({ where: { goalId: moveGoalId } })
+      const sortOrder = await tx.sprintGoal.count({ where: { sprintId: id } })
+      await tx.sprintGoal.create({ data: { sprintId: id, goalId: moveGoalId, sortOrder } })
+    }
     if (goalIds) {
       await tx.sprintGoal.deleteMany({ where: { sprintId: id } })
       for (const [sortOrder, goalId] of goalIds.entries()) {

@@ -26,7 +26,7 @@ blocking and environmental enforcement remain external layers.
 
 ```text
 Outcome -> measurable targets -> current gaps/problems -> next steps
-        -> focus session -> output/evidence -> target progress -> review
+        -> focus session -> optional result note -> target progress -> review
                                          \-> interruption/recovery -> next step
 ```
 
@@ -34,7 +34,7 @@ The Work screen answers only three questions:
 
 1. What matters now?
 2. What is the smallest concrete action I can start?
-3. What proof will exist when the action is done?
+3. What changed after I worked?
 
 Historical charts, GPP, rivals, and weights remain available, but are not the
 primary moment-of-choice interface.
@@ -119,7 +119,7 @@ An executable unit of work.
 - status and sort order;
 - definition of done / expected output.
 
-The active-work list shows at most three committed steps. A backlog may be
+The active-work list shows at most three planned steps. A backlog may be
 large; the commitment list may not.
 
 ### Focus session
@@ -127,11 +127,11 @@ large; the commitment list may not.
 An intentional start/stop record linked to an action. A session can be running,
 completed, interrupted, or abandoned.
 
-On start, the UI shows the step, optional expected output, elapsed time, and
-stop controls. Completing a session requires one concise line of proof; the UI
-must label this requirement before submission. Interrupted or abandoned
-sessions may record optional friction without fake evidence. Completed focus
-sessions create productive time entries so the existing analytics remain useful.
+On start, the UI shows the step, elapsed time, and stop controls. A completed
+session can record a short result note, but there is no proof gate. Interrupted
+or abandoned sessions may record optional friction without invented evidence.
+Completed focus sessions create productive time entries so the existing
+analytics remain useful.
 
 ### Check-in and recovery
 
@@ -155,8 +155,8 @@ Order and ownership both matter:
 
 Progress is the first tab and default landing view. It owns GPP, composition,
 and historical charts. Work is the second tab and owns setup and execution:
-Sprints, outcomes, the current focus, the running session, up to three
-committed steps, scope adjustment, and recovery. The two views share data but
+Sprints, outcomes, the current focus, the running session, up to three planned
+steps, scope adjustment, and recovery. The two views share data but
 must not duplicate controls or create competing sources of truth.
 
 The running session shows elapsed time and remaining planned time. Completing,
@@ -164,7 +164,7 @@ interrupting, or abandoning a session records the outcome; interruption keeps
 the action available today, while abandonment returns it to the backlog.
 
 The trillion-dollar GPP panel remains a symbolic scoreboard. It must not pretend
-to be financial output. Inside Work, the active session or committed-step queue
+to be financial output. Inside Work, the active session or planned-step queue
 must remain visually dominant.
 
 ## Time-accounting truth rules
@@ -206,9 +206,9 @@ must remain visually dominant.
 ### Slice 1: complete goal-to-action loop
 
 - Add department modules, goals, targets, problems, actions, and focus sessions.
-- Add APIs, export/import support, cache hooks, and a committed-step execution view.
+- Add APIs, export/import support, cache hooks, and a planned-step execution view.
 - Add reusable goal editor; configure the exam sprint through normal UI/data.
-- Starting and completing an action must work end-to-end and create evidence.
+- Starting and completing an action must work end-to-end and create a canonical time entry.
 
 ### Slice 2: department-specific workbenches
 
@@ -232,10 +232,10 @@ must remain visually dominant.
 
 1. A custom department can choose or change an operating module.
 2. A user can create an Education goal and add arbitrary subject targets.
-3. A user can write a problem, attach a step, and see it in committed steps.
-4. A user can commit up to three primary steps.
+3. A user can write a problem, attach a step, and see it in planned steps.
+4. A user can plan up to three primary steps for today.
 5. Start persists a running focus session across refreshes.
-6. Finish records duration and output and advances linked progress.
+6. Finish records duration, accepts an optional result note, and advances linked progress.
 7. A session-created time entry appears in the existing Database analytics.
 8. The exam goal is editable and uses no exam-only database table or route.
 9. GPP still exists but is secondary and explicitly described as metaphorical.

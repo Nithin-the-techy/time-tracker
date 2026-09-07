@@ -733,7 +733,7 @@ export function compositionForRange(
   if (totals.unknown > 0) {
     slices.push({
       key: 'unknown',
-      label: 'Unknown',
+      label: 'Unlogged',
       minutes: totals.unknown,
       kind: 'unknown',
       color: '#475569',
