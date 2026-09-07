@@ -101,7 +101,6 @@ export function TodayScreen() {
           <div className="py-6 text-center"><p className="text-sm text-muted-foreground">{activeSprint ? 'No steps planned for this Sprint today.' : 'No steps planned today.'}</p>{activeSprint?.goals[0] && <Button className="mt-3" variant="outline" onClick={() => openGoal(activeSprint.goals[0].goalId)}>Add a step</Button>}</div>
         ) : visible.map((item) => <StepRow key={item.action.id} item={item} {...rowProps} />)}
       </div>
-      <LedgerMeta className="mt-4 border-t border-border pt-3">Queue = planned today · Log time = unplanned work.</LedgerMeta>
       {remaining > 0 && <Button variant="ghost" size="sm" className="mt-3 px-0 text-muted-foreground" onClick={() => setShowAll((value) => !value)}>{showAll ? 'Show first 3 steps' : `Show ${remaining} more planned step${remaining === 1 ? '' : 's'}`}</Button>}
       {outsideSprint.length > 0 && (
         <details className="mt-4 border-t border-border pt-4">
@@ -158,8 +157,8 @@ function RunningSession({ session, action, goalTitle }: { session: FocusSession;
   return (
     <LedgerPanel className="flex min-h-[calc(100dvh-10rem)] flex-col justify-center border-[var(--growth)]/60 shadow-[0_0_35px_rgba(251,191,36,0.06)]">
       <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0"><p className="flex items-center gap-2 text-sm font-medium text-[var(--growth)]"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--growth)]" /> Focus block in progress</p><h2 className="mt-3 text-2xl font-semibold leading-8">{action.title}</h2><LedgerMeta className="mt-1">{goalTitle}</LedgerMeta></div>
-        <div className="text-right"><p className="ledger-metric text-6xl">{elapsed}m</p><LedgerMeta>{Math.max(0, action.plannedMinutes - elapsed)}m left</LedgerMeta></div>
+        <div className="min-w-0"><p className="flex items-center gap-2 text-sm font-medium text-[var(--growth)]"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--growth)]" /> Focus</p><h2 className="mt-3 text-2xl font-semibold leading-8">{action.title}</h2><LedgerMeta className="mt-1">{goalTitle}</LedgerMeta></div>
+        <div className="text-right"><p className="ledger-metric text-5xl">{elapsed}m</p><LedgerMeta>{Math.max(0, action.plannedMinutes - elapsed)}m left</LedgerMeta></div>
       </div>
       {action.definitionOfDone && <LedgerRow className="mt-4 border-[var(--growth)]/20 bg-[var(--growth)]/8 text-sm"><CheckCircle2 className="mr-2 inline h-4 w-4" />{action.definitionOfDone}</LedgerRow>}
       <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-[var(--growth)] transition-all" style={{ width: `${Math.min(100, (elapsed / Math.max(1, action.plannedMinutes)) * 100)}%` }} /></div>
