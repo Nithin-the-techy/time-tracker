@@ -70,6 +70,10 @@
 
   /* neutral layer of the day-composition bar (sleep + meals) */
   --neutral-layer: oklch(0.48 0.015 250);
+
+  /* Quiet Ledger spacing: compact rows and standalone panels only. */
+  --ledger-row-space: 1rem;
+  --ledger-panel-space: 1.5rem;
 }
 
 @layer base {
@@ -84,6 +88,17 @@
   .font-serif {
     font-family: var(--font-fraunces), Georgia, serif;
     font-feature-settings: "ss01", "ss02";
+  }
+  .ledger-page-title {
+    font-family: var(--font-fraunces), Georgia, serif;
+    font-size: clamp(2rem, 5vw, 2.75rem);
+    line-height: 1;
+    letter-spacing: -0.035em;
+  }
+  .ledger-metric {
+    font-family: var(--font-fraunces), Georgia, serif;
+    font-feature-settings: "ss01", "ss02";
+    font-variant-numeric: tabular-nums;
   }
   ::-webkit-scrollbar {
     width: 8px;

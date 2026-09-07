@@ -91,8 +91,8 @@ export function DatabaseScreen() {
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
       <div>
-        <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Canonical ledger</p>
-        <h1 className="font-serif text-3xl mt-1">History</h1>
+        <p className="text-sm text-muted-foreground">Canonical ledger</p>
+        <h1 className="ledger-page-title mt-1">History</h1>
       </div>
 
       <section>
@@ -183,13 +183,13 @@ function DepartmentRow({
     >
       <div className="col-span-5 flex items-center gap-2 min-w-0">
         <span className="inline-block h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
-        <span className="font-serif text-base truncate">{name}</span>
+        <span className="truncate text-sm font-medium">{name}</span>
       </div>
       <div className="col-span-2 text-sm text-muted-foreground tabular-nums">
         {subCount} subs
       </div>
       <div className="col-span-3 text-right">
-        <span className="font-serif text-lg tabular-nums text-[var(--growth)]">{formatHours(minutes)}</span>
+        <span className="ledger-metric text-lg text-[var(--growth)]">{formatHours(minutes)}</span>
         <span className="text-xs text-muted-foreground ml-1.5 tabular-nums">· {Math.round(share)}%</span>
       </div>
       <div className="col-span-2 text-right text-xs text-muted-foreground tabular-nums">

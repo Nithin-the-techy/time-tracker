@@ -164,7 +164,7 @@ export function ProgressScreen() {
   const hoursTitle = mode === 'dayweek' ? 'Hours by day' : mode === 'month' ? 'Hours by week' : 'Hours by month'
 
   return (
-    <div className="space-y-8">
+    <div className="mx-auto max-w-5xl space-y-8">
       {/* Hero row — GPP left, trailing-30 right, both big, both window-independent */}
       <div className="flex flex-wrap items-start justify-between gap-x-10 gap-y-6">
         <div>
@@ -172,7 +172,7 @@ export function ProgressScreen() {
             GPP / month
           </p>
           <div className="flex items-baseline gap-3 flex-wrap">
-            <h1 className="font-serif text-6xl tracking-tight tabular-nums text-[var(--growth)]">
+            <h1 className="ledger-metric text-6xl text-[var(--growth)]">
               {formatMoney(g.monthlyDollars)}
             </h1>
             <span className="text-sm text-muted-foreground">/ month</span>
@@ -189,7 +189,7 @@ export function ProgressScreen() {
         <div className="md:text-right">
           <p className="text-sm text-muted-foreground mb-1">Productive · last {t30.days} {t30.days === 1 ? 'day' : 'days'}</p>
           <div className="flex items-baseline gap-3 flex-wrap md:justify-end">
-            <h2 className="font-serif text-6xl tracking-tight tabular-nums text-foreground">
+            <h2 className="ledger-metric text-6xl text-foreground">
               {bigHours(t30.productiveMinutes)}
             </h2>
           </div>

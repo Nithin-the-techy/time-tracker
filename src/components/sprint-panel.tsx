@@ -1,92 +1,108 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { CalendarRange, Plus, Play, Pause, Pencil } from 'lucide-react'
+import { CalendarRange, ChevronRight, Pause, Play, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useGoals, useSprints, store } from '@/lib/hooks'
-import { toKey } from '@/lib/dates'
+import { daysRemaining } from '@/lib/goal-metrics'
+import { addDays, toKey } from '@/lib/dates'
 import { toast } from 'sonner'
 
 export function SprintPanel() {
   const { sprints, loading } = useSprints()
   const { goals } = useGoals()
+  const active = useMemo(() => sprints.find((sprint) => sprint.status === 'active'), [sprints])
   const [open, setOpen] = useState(false)
+  const [creating, setCreating] = useState(false)
   const [name, setName] = useState('')
   const [phase, setPhase] = useState('')
   const [startDate, setStartDate] = useState(toKey(new Date()))
-  const [endDate, setEndDate] = useState(toKey(new Date()))
-  const [busy, setBusy] = useState(false)
+  const [endDate, setEndDate] = useState(toKey(addDays(new Date(), 17)))
   const [goalId, setGoalId] = useState('')
-  const [editing, setEditing] = useState(false)
-  const [attaching, setAttaching] = useState(false)
-  const active = useMemo(() => sprints.find((s) => s.status === 'active'), [sprints])
-  const visible = sprints.filter((s) => s.status !== 'archived').slice(0, 4)
+  const [busy, setBusy] = useState(false)
 
-  async function create() {
-    if (!name.trim()) return
+  function openEditor() {
+    setCreating(!active)
+    if (active) {
+      setName(active.name); setPhase(active.phase ?? ''); setStartDate(active.startDate); setEndDate(active.endDate)
+    } else {
+      setName(''); setPhase(''); setStartDate(toKey(new Date())); setEndDate(toKey(addDays(new Date(), 17)))
+    }
+    setOpen(true)
+  }
+
+  async function save() {
+    if (!name.trim() || busy) return
     setBusy(true)
     try {
-      await store.createSprint({ name, phase: phase || null, startDate, endDate, status: active ? 'planned' : 'active' })
-      setName(''); setPhase(''); setOpen(false)
-      toast.success('Sprint created')
-    } catch (error) { toast.error(error instanceof Error ? error.message : 'Could not create Sprint') }
+      if (creating || !active) {
+        await store.createSprint({ name: name.trim(), phase: phase.trim() || null, startDate, endDate, status: active ? 'planned' : 'active' })
+        toast.success('Sprint created')
+      } else {
+        await store.updateSprint(active.id, { name: name.trim(), phase: phase.trim() || null, startDate, endDate })
+        toast.success('Sprint updated')
+      }
+      setOpen(false)
+    } catch (error) { toast.error(error instanceof Error ? error.message : 'Could not save Sprint') }
     finally { setBusy(false) }
   }
 
-  async function setStatus(id: string, status: 'active' | 'paused') {
-    try { await store.updateSprint(id, { status }); toast.success(status === 'active' ? 'Sprint activated' : 'Sprint paused') }
-    catch (error) { toast.error(error instanceof Error ? error.message : 'Could not update Sprint') }
+  async function setStatus(id: string, status: 'active' | 'paused' | 'archived') {
+    try {
+      await store.updateSprint(id, { status })
+      toast.success(status === 'active' ? 'Sprint activated' : status === 'paused' ? 'Sprint paused' : 'Sprint archived')
+      if (id === active?.id) setOpen(false)
+    } catch (error) { toast.error(error instanceof Error ? error.message : 'Could not update Sprint') }
   }
 
   async function attachGoal() {
-    if (!active || !goalId || attaching) return
-    setAttaching(true)
+    if (!active || !goalId || busy) return
+    setBusy(true)
     try {
       await store.updateSprint(active.id, { goalIds: [...active.goals.map((link) => link.goalId), goalId] })
       setGoalId('')
       toast.success('Outcome added to Sprint')
     } catch (error) { toast.error(error instanceof Error ? error.message : 'Could not add outcome') }
-    finally { setAttaching(false) }
-  }
-
-  async function archiveActive() {
-    if (!active || !window.confirm('Archive this Sprint? Its goals remain available.')) return
-    await setStatus(active.id, 'paused')
-    await store.updateSprint(active.id, { status: 'archived' })
+    finally { setBusy(false) }
   }
 
   const availableGoals = active ? goals.filter((goal) => goal.status === 'active' && !active.goals.some((link) => link.goalId === goal.id)) : []
+  const otherSprints = sprints.filter((sprint) => sprint.id !== active?.id && sprint.status !== 'archived').slice(0, 4)
 
+  if (loading) return <div className="h-11 animate-pulse rounded-md border border-border bg-muted/20" />
   return (
-    <Card className="border-[var(--growth)]/25">
-      <CardHeader className="pb-2 flex-row items-center justify-between space-y-0">
-        <CardTitle className="text-base flex items-center gap-2"><CalendarRange className="h-4 w-4 text-[var(--growth)]" /> {active ? 'Current Sprint' : 'Sprint'}</CardTitle>
-        <Button variant="ghost" size="sm" onClick={() => setOpen((value) => !value)}><Plus className="h-4 w-4 mr-1" /> New Sprint</Button>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        {active ? (
-          <div className="rounded-md border border-[var(--growth)]/30 p-3">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0"><p className="font-serif text-xl">{active.name}</p><p className="text-sm text-muted-foreground mt-1">{active.startDate} → {active.endDate}</p>{active.phase && <p className="text-sm text-muted-foreground mt-2">{active.phase}</p>}</div>
-              <div className="flex gap-1"><Button size="sm" variant="ghost" onClick={() => setEditing((value) => !value)}><Pencil className="h-3.5 w-3.5" /></Button><Button size="sm" variant="ghost" onClick={() => setStatus(active.id, 'paused')}><Pause className="h-3.5 w-3.5 mr-1" /> Pause</Button></div>
-            </div>
-            {editing && <div className="grid sm:grid-cols-2 gap-3 mt-4 rounded-md bg-background/50 p-3"><div><Label className="text-xs">Name</Label><Input defaultValue={active.name} onBlur={(event) => { const name = event.target.value.trim(); if (name && name !== active.name) store.updateSprint(active.id, { name }).catch((error) => toast.error(error.message)) }} /></div><div><Label className="text-xs">Focus</Label><Input defaultValue={active.phase ?? ''} placeholder="What this period is for" onBlur={(event) => { const phase = event.target.value.trim() || null; if (phase !== active.phase) store.updateSprint(active.id, { phase }).catch((error) => toast.error(error.message)) }} /></div><div><Label className="text-xs">Starts</Label><Input type="date" defaultValue={active.startDate} onBlur={(event) => store.updateSprint(active.id, { startDate: event.target.value }).catch((error) => toast.error(error.message))} /></div><div><Label className="text-xs">Ends</Label><Input type="date" defaultValue={active.endDate} onBlur={(event) => store.updateSprint(active.id, { endDate: event.target.value }).catch((error) => toast.error(error.message))} /></div><Button size="sm" variant="ghost" className="sm:col-span-2 justify-start text-muted-foreground" onClick={archiveActive}>Archive Sprint</Button></div>}
-            <p className="text-xs text-muted-foreground mt-3">{active.goals.length} outcome{active.goals.length === 1 ? '' : 's'}</p>
-            {availableGoals.length > 0 && <div className="flex gap-2 mt-3"><select value={goalId} onChange={(event) => setGoalId(event.target.value)} className="h-9 min-w-0 flex-1 rounded-md border border-input bg-background px-2 text-sm"><option value="">Attach existing outcome…</option>{availableGoals.map((goal) => <option key={goal.id} value={goal.id}>{goal.title}</option>)}</select><Button size="sm" variant="outline" onClick={attachGoal} disabled={!goalId || attaching}>Attach</Button></div>}
+    <>
+      <button type="button" onClick={openEditor} className="flex w-full items-center gap-3 rounded-md border border-border px-4 py-3 text-left transition hover:border-foreground/25">
+        <CalendarRange className="h-4 w-4 text-[var(--growth)]" />
+        {active ? <><span className="min-w-0 flex-1 truncate text-sm font-medium">{active.name}</span><span className="text-sm text-muted-foreground">{deadlineLabel(daysRemaining(active.endDate))} · {active.goals.length} outcome{active.goals.length === 1 ? '' : 's'}</span></> : <span className="flex-1 text-sm text-muted-foreground">Create a Sprint to define the current execution window</span>}
+        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+      </button>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>{creating ? 'New Sprint' : 'Sprint settings'}</DialogTitle><DialogDescription>{creating ? 'Define one focused execution window.' : 'Keep the active window and its outcomes aligned.'}</DialogDescription></DialogHeader>
+          <div className="space-y-4">
+            <div><Label>Name</Label><Input value={name} onChange={(event) => setName(event.target.value)} placeholder="September execution window" /></div>
+            <div><Label>Focus <span className="font-normal text-muted-foreground">(optional)</span></Label><Input value={phase} onChange={(event) => setPhase(event.target.value)} placeholder="What this period is for" /></div>
+            <div className="grid grid-cols-2 gap-3"><div><Label>Starts</Label><Input type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} /></div><div><Label>Ends</Label><Input type="date" min={startDate} value={endDate} onChange={(event) => setEndDate(event.target.value)} /></div></div>
+            {!creating && active && availableGoals.length > 0 && <div><Label>Add an existing outcome</Label><div className="flex gap-2"><select value={goalId} onChange={(event) => setGoalId(event.target.value)} className="h-10 min-w-0 flex-1 rounded-md border border-input bg-background px-3 text-sm"><option value="">Choose outcome…</option>{availableGoals.map((goal) => <option key={goal.id} value={goal.id}>{goal.title}</option>)}</select><Button variant="outline" onClick={attachGoal} disabled={!goalId || busy}>Add</Button></div></div>}
+            {!creating && otherSprints.length > 0 && <div className="border-t border-border pt-4"><p className="mb-2 text-sm font-medium">Other Sprints</p>{otherSprints.map((sprint) => <div key={sprint.id} className="flex items-center justify-between py-2 text-sm"><span>{sprint.name}</span><Button size="sm" variant="ghost" onClick={() => setStatus(sprint.id, 'active')}><Play className="h-3.5 w-3.5" /> Activate</Button></div>)}</div>}
           </div>
-        ) : null}
-
-        {open && <div className="border-t border-border pt-3 space-y-2">
-          <div className="grid sm:grid-cols-2 gap-2"><div><Label className="text-xs">Name</Label><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Current execution period" /></div><div><Label className="text-xs">Focus (optional)</Label><Input value={phase} onChange={(e) => setPhase(e.target.value)} placeholder="What this period is for" /></div></div>
-          <div className="grid sm:grid-cols-2 gap-2"><div><Label className="text-xs">Starts</Label><Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} /></div><div><Label className="text-xs">Ends</Label><Input type="date" min={startDate} value={endDate} onChange={(e) => setEndDate(e.target.value)} /></div></div>
-          <Button onClick={create} disabled={busy || !name.trim()}><Play className="h-4 w-4 mr-1" /> Create Sprint</Button>
-        </div>}
-
-        {visible.filter((s) => s.id !== active?.id).map((s) => <div key={s.id} className="flex items-center justify-between gap-3 text-sm border-t border-border pt-2"><span className="truncate">{s.name}<span className="text-xs text-muted-foreground ml-2">{s.status}</span></span>{s.status === 'planned' || s.status === 'paused' ? <Button size="sm" variant="outline" onClick={() => setStatus(s.id, 'active')}><Play className="h-3.5 w-3.5 mr-1" /> Activate</Button> : null}</div>)}
-      </CardContent>
-    </Card>
+          <DialogFooter className="sm:justify-between">
+            {!creating && active ? <div className="flex gap-1"><Button variant="ghost" onClick={() => setStatus(active.id, 'paused')}><Pause className="h-4 w-4" /> Pause</Button><Button variant="ghost" className="text-muted-foreground" onClick={() => { if (window.confirm('Archive this Sprint? Its outcomes stay available.')) setStatus(active.id, 'archived') }}>Archive</Button></div> : <span />}
+            <div className="flex gap-2"><Button variant="outline" onClick={() => { setCreating(true); setName(''); setPhase(''); setStartDate(toKey(new Date())); setEndDate(toKey(addDays(new Date(), 17))) }}><Plus className="h-4 w-4" /> New</Button><Button onClick={save} disabled={busy || !name.trim()}>{creating ? 'Create Sprint' : 'Save changes'}</Button></div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   )
+}
+
+function deadlineLabel(days: number) {
+  if (days < 0) return `${Math.abs(days)}d overdue`
+  if (days === 0) return 'ends today'
+  return `${days}d left`
 }

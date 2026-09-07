@@ -11,12 +11,12 @@ export async function POST(req: NextRequest) {
 }
 
 async function startSession(actionId: string) {
-  if (!actionId) return NextResponse.json({ error: 'actionId required' }, { status: 400 })
+  if (!actionId) return NextResponse.json({ error: 'step required' }, { status: 400 })
   const running = await db.focusSession.findFirst({ where: { status: 'running' } })
   if (running) return NextResponse.json({ error: 'A focus session is already running' }, { status: 409 })
   const action = await db.goalAction.findUnique({ where: { id: actionId } })
   if (!action || ['completed', 'cancelled'].includes(action.status)) {
-    return NextResponse.json({ error: 'action cannot be started' }, { status: 400 })
+    return NextResponse.json({ error: 'step cannot be started' }, { status: 400 })
   }
   const session = await db.$transaction(async (tx) => {
     await tx.goalAction.update({ where: { id: actionId }, data: { status: 'in_progress' } })
@@ -38,7 +38,7 @@ async function finishSession(body: Record<string, unknown>) {
     return NextResponse.json({ error: 'invalid session outcome' }, { status: 400 })
   }
   if (outcome === 'completed' && !output) {
-    return NextResponse.json({ error: 'Describe the output or evidence before completing' }, { status: 400 })
+    return NextResponse.json({ error: 'Add one line of proof before finishing this step' }, { status: 400 })
   }
 
   const session = await db.focusSession.findUnique({
