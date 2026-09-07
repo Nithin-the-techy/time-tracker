@@ -89,10 +89,11 @@ export function DatabaseScreen() {
     .sort((a, b) => b.minutes - a.minutes)
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto">
+    <div className="mx-auto max-w-5xl space-y-8">
       <div>
-        <p className="text-sm text-muted-foreground">Canonical ledger</p>
+        <p className="text-sm text-[var(--growth)]">The record</p>
         <h1 className="ledger-page-title mt-1">History</h1>
+        <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">Browse the time you actually recorded. Filter first, then inspect the chart and the underlying entries.</p>
       </div>
 
       <section>

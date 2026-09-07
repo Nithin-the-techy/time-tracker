@@ -176,7 +176,7 @@ export function ProgressScreen() {
       <div className="flex flex-wrap items-start justify-between gap-x-10 gap-y-6">
         <div>
           <p className="text-sm text-muted-foreground mb-1" title={GPP_TOOLTIP}>
-            GPP / month
+            GPP / month equivalent
           </p>
           <div className="flex items-baseline gap-3 flex-wrap">
             <h1 className="ledger-metric text-6xl text-[var(--growth)]">
@@ -189,7 +189,7 @@ export function ProgressScreen() {
             month · {formatHours(g.avgPerDayMinutes)}/day across {g.daysTracked} tracked {g.daysTracked === 1 ? 'day' : 'days'}
           </p>
           <p className="text-xs text-muted-foreground/70 mt-0.5">
-            {formatGoalPercent(g.goalPercent)} of the $1T/month goal · on pace for {formatMoney(g.annualDollars)} a year
+            {formatGoalPercent(g.goalPercent)} of the $1T/month reference · on pace for {formatMoney(g.annualDollars)} a year
           </p>
         </div>
 

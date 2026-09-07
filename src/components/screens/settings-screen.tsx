@@ -51,10 +51,11 @@ export function SettingsScreen() {
   }
 
   return (
-    <div className="space-y-6 pb-20 max-w-2xl">
+    <div className="mx-auto max-w-4xl space-y-7 pb-20">
       <div>
-        <h1 className="ledger-page-title">Settings</h1>
-        <p className="mt-2 text-sm text-muted-foreground">Shape the ledger without changing the records it contains.</p>
+        <p className="text-sm text-[var(--growth)]">System</p>
+        <h1 className="ledger-page-title mt-1">Settings</h1>
+        <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">Keep the measurement rules, categories, comparisons, and backups understandable. These controls change the system around your records.</p>
       </div>
 
       <DepartmentModulesCard departments={departments} />

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ArrowLeft, Check, CirclePlus, Pause, Play, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -15,99 +15,154 @@ import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { SprintPanel } from '@/components/sprint-panel'
 import { TodayScreen } from '@/components/screens/today-screen'
-import { LedgerPanel, LedgerRow, LedgerSectionLabel } from '@/components/quiet-ledger'
+import { LedgerMeta, LedgerPanel, LedgerRow, LedgerSectionLabel } from '@/components/quiet-ledger'
 
 export function GoalsScreen() {
   const { goals, loading } = useGoals()
   const { departments } = useDepartments()
   const { sprints } = useSprints()
-  const activeGoalId = useUIStore((s) => s.activeGoalId)
-  const openGoal = useUIStore((s) => s.openGoal)
-  const closeGoal = useUIStore((s) => s.closeGoal)
+  const activeGoalId = useUIStore((state) => state.activeGoalId)
+  const openGoal = useUIStore((state) => state.openGoal)
+  const closeGoal = useUIStore((state) => state.closeGoal)
   const activeGoal = goals.find((goal) => goal.id === activeGoalId)
   const visibleGoals = goals.filter((goal) => !['completed', 'abandoned'].includes(goal.status))
-  const activeSprint = sprints.find((sprint) => sprint.status === 'active')
-  const activeSprintGoalIds = new Set(activeSprint?.goals.map((link) => link.goalId) ?? [])
-  const sprintGoals = visibleGoals.filter((goal) => activeSprintGoalIds.has(goal.id))
-  const otherGoals = visibleGoals.filter((goal) => !activeSprintGoalIds.has(goal.id))
-  if (activeGoal) return <GoalWorkbench goal={activeGoal} onBack={closeGoal} />
+  const visibleSprints = sprints.filter((sprint) => sprint.status !== 'archived')
+  const linkedGoalIds = new Set(visibleSprints.flatMap((sprint) => sprint.goals.map((link) => link.goalId)))
+  const generalGoals = visibleGoals.filter((goal) => !linkedGoalIds.has(goal.id))
+
+  useEffect(() => {
+    if (activeGoalId) document.getElementById('outcome-detail')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [activeGoalId])
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
-      <h1 className="ledger-page-title">Work</h1>
+    <div className="mx-auto max-w-5xl space-y-8 overflow-x-hidden pb-12">
+      <header className="max-w-3xl">
+        <p className="text-sm text-[var(--growth)]">Execution</p>
+        <h1 className="ledger-page-title mt-1">Work</h1>
+        <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">Plan a small amount, start one focus block, and leave a useful record. Backlog work stays out of today until you choose it.</p>
+      </header>
+
       <TodayScreen />
       <SprintPanel />
 
-      <section className="space-y-3">
-        <div className="flex items-center justify-between gap-3">
-          <LedgerSectionLabel>Outcomes</LedgerSectionLabel>
-          <CreateGoalPanel departments={departments} sprintId={activeSprint?.id ?? null} sprintName={activeSprint?.name ?? null} />
+      <section className="space-y-3" aria-labelledby="sprint-outcomes-heading">
+        <div className="flex items-end justify-between gap-4">
+          <div><LedgerSectionLabel id="sprint-outcomes-heading">Outcomes by Sprint</LedgerSectionLabel><LedgerMeta className="mt-1">Outcomes live under the window they support.</LedgerMeta></div>
+          <span className="text-xs tabular-nums text-muted-foreground">{visibleSprints.length} window{visibleSprints.length === 1 ? '' : 's'}</span>
         </div>
-
-      {loading ? <p className="text-sm text-muted-foreground text-center py-8">Loading…</p> : visibleGoals.length === 0 ? null : (
-        <div className="-mx-1 flex flex-wrap gap-2 px-1 pb-2">
-          {[...sprintGoals, ...otherGoals].map((goal) => <OutcomeChip key={goal.id} goal={goal} outsideSprint={Boolean(activeSprint && !activeSprintGoalIds.has(goal.id))} onClick={() => openGoal(goal.id)} />)}
-        </div>
-      )}
+        {loading ? <p className="py-6 text-sm text-muted-foreground">Loading outcomes…</p> : visibleSprints.length === 0 ? <EmptySprintState /> : visibleSprints.map((sprint) => <SprintOutcomeGroup key={sprint.id} sprint={sprint} onOpenGoal={openGoal} />)}
       </section>
+
+      <section className="space-y-3" aria-labelledby="general-outcomes-heading">
+        <div className="flex items-end justify-between gap-4">
+          <div><LedgerSectionLabel id="general-outcomes-heading">General outcomes</LedgerSectionLabel><LedgerMeta className="mt-1">Useful work that is not attached to a Sprint yet.</LedgerMeta></div>
+          <GeneralOutcomeDialog departments={departments} />
+        </div>
+        {loading ? <p className="py-6 text-sm text-muted-foreground">Loading outcomes…</p> : generalGoals.length === 0 ? <LedgerPanel className="border-dashed bg-transparent py-5"><p className="text-sm text-muted-foreground">No general outcomes. Add one here when it does not belong to a Sprint.</p></LedgerPanel> : <div className="flex flex-wrap gap-2">{generalGoals.map((goal) => <OutcomeButton key={goal.id} goal={goal} onClick={() => openGoal(goal.id)} />)}</div>}
+      </section>
+
+      {activeGoal && <section id="outcome-detail" className="scroll-mt-6 border-t border-border pt-8" aria-label="Outcome details"><GoalWorkbench goal={activeGoal} onBack={closeGoal} /></section>}
     </div>
   )
 }
 
-function CreateGoalPanel({ departments, sprintId, sprintName }: { departments: ReturnType<typeof useDepartments>['departments']; sprintId: string | null; sprintName: string | null }) {
-  const [open, setOpen] = useState(false)
-  const [busy, setBusy] = useState(false)
-  const today = toKey(new Date())
-  const initialTarget = toKey(addDays(new Date(), 17))
-  const [departmentId, setDepartmentId] = useState(departments[0]?.id ?? '')
-  const [title, setTitle] = useState('')
-  const [outcome, setOutcome] = useState('')
-  const [targetDate, setTargetDate] = useState(initialTarget)
-  const [attachToSprint, setAttachToSprint] = useState(Boolean(sprintId))
+function EmptySprintState() {
+  return <LedgerPanel className="border-dashed bg-transparent py-5"><p className="text-sm text-muted-foreground">No Sprint yet. Add one above when you are ready to define an execution window.</p></LedgerPanel>
+}
 
-  const effectiveDepartmentId = departmentId || departments[0]?.id || ''
-
-  async function createCustom() {
-    if (!effectiveDepartmentId || !title.trim() || !outcome.trim()) return
-    setBusy(true)
-    try {
-      await store.createGoal({ departmentId: effectiveDepartmentId, title, outcome, startDate: today, targetDate, sprintId: attachToSprint ? sprintId : null })
-      setTitle(''); setOutcome(''); setOpen(false)
-      toast.success('Goal created')
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Could not create goal')
-    } finally { setBusy(false) }
-  }
-
+function SprintOutcomeGroup({ sprint, onOpenGoal }: { sprint: ReturnType<typeof useSprints>['sprints'][number]; onOpenGoal: (id: string) => void }) {
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild><Button variant="outline" size="sm"><CirclePlus className="h-4 w-4 mr-1" /> Add outcome</Button></DialogTrigger>
-      <DialogContent className="sm:max-w-xl md:left-[calc(50%+7rem)]">
-        <DialogHeader><DialogTitle>New outcome</DialogTitle><DialogDescription>{attachToSprint && sprintName ? `Adds to ${sprintName}` : 'Can be attached to a Sprint later'}</DialogDescription></DialogHeader>
-          <div className="space-y-4">
-            <div className="grid sm:grid-cols-2 gap-3">
-              <div><Label className="text-xs">Area</Label><select value={effectiveDepartmentId} onChange={(e) => setDepartmentId(e.target.value)} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">{departments.map((d) => <option key={d.id} value={d.id}>{d.name.replace('Department of ', '')}</option>)}</select></div>
-              <div><Label className="text-xs">Due</Label><Input type="date" min={today} value={targetDate} onChange={(e) => setTargetDate(e.target.value)} /></div>
-            </div>
-            <div><Label className="text-xs">Outcome</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Get a 7 in Physics" /></div>
-            <div><Label className="text-xs">Finished when</Label><Textarea value={outcome} onChange={(e) => setOutcome(e.target.value)} rows={2} placeholder="What result proves this is done?" /></div>
-            {sprintName && <label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={attachToSprint} onChange={(event) => setAttachToSprint(event.target.checked)} className="mt-0.5" /><span><span className="block">Attach to {sprintName}</span><span className="text-xs text-muted-foreground">You can move this outcome between Sprints later.</span></span></label>}
-            <div className="flex gap-2"><Button onClick={createCustom} disabled={busy || !title.trim() || !outcome.trim()}>Add outcome</Button><Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button></div>
-          </div>
-      </DialogContent>
-    </Dialog>
+    <section className={cn('rounded-lg border p-4', sprint.status === 'active' ? 'border-[var(--growth)]/35 bg-[var(--growth)]/[0.04]' : 'border-border bg-card/30')}>
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><h3 className="truncate text-sm font-semibold">{sprint.name}</h3><span className="rounded-sm border border-border px-1.5 py-0.5 text-[11px] text-muted-foreground">{sprintStatusLabel(sprint.status)}</span></div><LedgerMeta className="mt-1">{sprint.phase || `${daysRemaining(sprint.endDate)}d remaining`} · {sprint.goals.length} outcome{sprint.goals.length === 1 ? '' : 's'}</LedgerMeta></div>
+        <span className="text-xs tabular-nums text-muted-foreground">{sprint.startDate} → {sprint.endDate}</span>
+      </div>
+      {sprint.goals.length === 0 ? <p className="mt-4 text-sm text-muted-foreground">No outcomes attached. Open Sprint settings above to add or move one here.</p> : <div className="mt-4 flex flex-wrap gap-2">{sprint.goals.map((link) => <OutcomeButton key={link.goalId} goal={link.goal} onClick={() => onOpenGoal(link.goalId)} />)}</div>}
+    </section>
   )
 }
 
-function OutcomeChip({ goal, outsideSprint, onClick }: { goal: Goal; outsideSprint: boolean; onClick: () => void }) {
+function GeneralOutcomeDialog({ departments }: { departments: ReturnType<typeof useDepartments>['departments'] }) {
+  const [open, setOpen] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [departmentId, setDepartmentId] = useState('')
+  const [title, setTitle] = useState('')
+  const [outcome, setOutcome] = useState('')
+  const [targetDate, setTargetDate] = useState(toKey(addDays(new Date(), 17)))
+  const today = toKey(new Date())
+  const effectiveDepartmentId = departmentId || departments[0]?.id || ''
+
+  async function create() {
+    if (!effectiveDepartmentId || !title.trim() || !outcome.trim() || busy) return
+    setBusy(true)
+    try {
+      await store.createGoal({ departmentId: effectiveDepartmentId, title: title.trim(), outcome: outcome.trim(), startDate: today, targetDate, sprintId: null })
+      setTitle(''); setOutcome(''); setOpen(false); toast.success('General outcome added')
+    } catch (error) { toast.error(error instanceof Error ? error.message : 'Could not add outcome') }
+    finally { setBusy(false) }
+  }
+
+  return <Dialog open={open} onOpenChange={setOpen}>
+    <DialogTrigger asChild><Button variant="outline" size="sm"><CirclePlus className="h-4 w-4" /> Add general outcome</Button></DialogTrigger>
+    <DialogContent className="sm:max-w-xl">
+      <DialogHeader><DialogTitle>Add a general outcome</DialogTitle><DialogDescription>This stays outside Sprints until you move it into one.</DialogDescription></DialogHeader>
+      <div className="space-y-4">
+        <div className="grid gap-3 sm:grid-cols-2"><div><Label>Area</Label><select value={effectiveDepartmentId} onChange={(event) => setDepartmentId(event.target.value)} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">{departments.map((department) => <option key={department.id} value={department.id}>{department.name.replace('Department of ', '')}</option>)}</select></div><div><Label>Due</Label><Input type="date" min={today} value={targetDate} onChange={(event) => setTargetDate(event.target.value)} /></div></div>
+        <div><Label>Outcome</Label><Input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="A result worth tracking" /></div>
+        <div><Label>Finished when</Label><Textarea value={outcome} onChange={(event) => setOutcome(event.target.value)} rows={3} placeholder="What result would make this complete?" /></div>
+        <div className="flex gap-2"><Button onClick={create} disabled={busy || !title.trim() || !outcome.trim()}>Add outcome</Button><Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button></div>
+      </div>
+    </DialogContent>
+  </Dialog>
+}
+
+function OutcomeButton({ goal, onClick }: { goal: Goal; onClick: () => void }) {
   const progress = goalProgress(goal)
   const state = outcomeState(goal, progress)
-  return (
-    <button onClick={onClick} title={`${goal.title} · ${deadlineLabel(daysRemaining(goal.targetDate))}${outsideSprint ? ' · Outside Sprint' : ''}`} className={cn('shrink-0 rounded-full border px-4 py-2 text-sm transition hover:border-foreground/35', state === 'positive' && 'border-[var(--growth)]/45 bg-[var(--growth)]/8', state === 'risk' && 'border-[var(--depreciation)]/45 bg-[var(--depreciation)]/8', state === 'neutral' && 'border-border bg-muted/20')}>
-      <span className="font-medium">{goal.title}</span>
-      <span className={cn('ml-2 tabular-nums', state === 'positive' ? 'text-[var(--growth)]' : state === 'risk' ? 'text-[var(--depreciation)]' : 'text-muted-foreground')}>{Math.round(progress * 100)}%</span>
-    </button>
-  )
+  return <button type="button" onClick={onClick} title={`${goal.title} · ${deadlineLabel(daysRemaining(goal.targetDate))}`} className={cn('rounded-md border px-3 py-2 text-left text-sm transition hover:-translate-y-px hover:border-foreground/35', state === 'positive' && 'border-[var(--growth)]/45 bg-[var(--growth)]/8', state === 'risk' && 'border-[var(--depreciation)]/45 bg-[var(--depreciation)]/8', state === 'neutral' && 'border-border bg-muted/20')}><span className="font-medium">{goal.title}</span><span className={cn('ml-2 tabular-nums', state === 'positive' ? 'text-[var(--growth)]' : state === 'risk' ? 'text-[var(--depreciation)]' : 'text-muted-foreground')}>{Math.round(progress * 100)}%</span></button>
+}
+
+function GoalWorkbench({ goal, onBack }: { goal: Goal; onBack: () => void }) {
+  const [editing, setEditing] = useState(false)
+  const [title, setTitle] = useState(goal.title)
+  const [outcome, setOutcome] = useState(goal.outcome)
+  const progress = goalProgress(goal)
+
+  return <div className="mx-auto max-w-4xl space-y-6"><div className="flex items-center justify-between gap-3"><div><p className="text-sm text-[var(--growth)]">Outcome detail</p><p className="mt-1 text-xs text-muted-foreground">Actions stay in Work; the active focus block takes over when you start one.</p></div><Button variant="ghost" size="sm" onClick={onBack}><ArrowLeft className="h-4 w-4" /> Close detail</Button></div>
+    <section className="rounded-lg border border-border bg-card p-6"><div className="flex items-start justify-between gap-6"><div className="min-w-0 flex-1"><p className="text-sm text-muted-foreground">{goal.department.name.replace('Department of ', '')}</p>{editing ? <div className="mt-2 space-y-2"><Input value={title} onChange={(event) => setTitle(event.target.value)} /><Textarea value={outcome} onChange={(event) => setOutcome(event.target.value)} rows={3} /><div className="flex gap-2"><Button size="sm" onClick={() => store.updateGoal(goal.id, { title, outcome }).then(() => setEditing(false)).catch((error) => toast.error(error instanceof Error ? error.message : 'Could not save outcome'))}>Save changes</Button><Button size="sm" variant="ghost" onClick={() => { setTitle(goal.title); setOutcome(goal.outcome); setEditing(false) }}>Cancel</Button></div></div> : <><h2 className="ledger-page-title mt-1 text-3xl">{goal.title}</h2><p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">{goal.outcome}</p></>}</div><div className="text-right"><p className="ledger-metric text-5xl text-[var(--growth)]">{Math.round(progress * 100)}%</p><p className="text-xs text-muted-foreground">{deadlineLabel(daysRemaining(goal.targetDate))}</p></div></div><div className="mt-5 h-2 overflow-hidden rounded-full bg-muted"><div className="h-full bg-[var(--growth)] transition-all" style={{ width: `${progress * 100}%` }} /></div><div className="mt-4 flex flex-wrap gap-2">{goal.status === 'active' ? <Button variant="outline" size="sm" onClick={() => store.updateGoal(goal.id, { status: 'paused' })}><Pause className="h-3.5 w-3.5" /> Pause outcome</Button> : <Button variant="outline" size="sm" onClick={() => store.updateGoal(goal.id, { status: 'active' })}><Play className="h-3.5 w-3.5" /> Activate outcome</Button>}<Button variant="ghost" size="sm" onClick={() => setEditing(true)}>Edit outcome</Button><Button variant="ghost" size="sm" onClick={() => store.updateGoal(goal.id, { status: 'completed' })}><Check className="h-3.5 w-3.5" /> Finish outcome</Button></div></section>
+    <section className="space-y-3"><div><LedgerSectionLabel>Steps for this outcome</LedgerSectionLabel><LedgerMeta className="mt-1">Backlog is everything you have recorded. Today&apos;s queue is the small set you chose to act on now.</LedgerMeta></div><ActionsPanel goal={goal} /></section>
+  </div>
+}
+
+function ActionsPanel({ goal }: { goal: Goal }) {
+  const [title, setTitle] = useState('')
+  const [finishHint, setFinishHint] = useState('')
+  const [minutes, setMinutes] = useState('45')
+  const [dueDate, setDueDate] = useState(toKey(new Date()))
+  const [subdepartmentId, setSubdepartmentId] = useState(goal.department.subdepartments[0]?.id ?? '')
+  const [planToday, setPlanToday] = useState(true)
+  const [busy, setBusy] = useState(false)
+
+  async function add() {
+    if (busy || !title.trim() || Number(minutes) <= 0) return
+    setBusy(true)
+    try {
+      await store.addGoalAction({ goalId: goal.id, title: title.trim(), definitionOfDone: finishHint.trim() || null, plannedMinutes: Number(minutes), context: 'focused', dueDate: dueDate || null, subdepartmentId: subdepartmentId || null, status: planToday ? 'today' : 'backlog' })
+      setTitle(''); setFinishHint(''); toast.success(planToday ? "Step added to today's queue" : 'Step saved to backlog')
+    } catch (error) { toast.error(error instanceof Error ? error.message : 'Could not add step') }
+    finally { setBusy(false) }
+  }
+
+  async function updateStatus(id: string, status: 'today' | 'backlog') {
+    try { await store.updateGoalAction(id, { status }); toast.success(status === 'today' ? 'Step planned for today' : 'Step moved to backlog') }
+    catch (error) { toast.error(error instanceof Error ? error.message : 'Could not update step') }
+  }
+
+  const actions = [...goal.actions].sort((a, b) => statusOrder(a.status) - statusOrder(b.status))
+  return <div className="space-y-3">
+    {actions.filter((action) => action.status !== 'cancelled').map((action) => <LedgerRow key={action.id} className="flex items-start gap-3"><div className="min-w-0 flex-1"><p className={cn('text-sm font-medium', action.status === 'completed' && 'text-muted-foreground line-through')}>{action.title}</p><p className="mt-1 text-xs text-muted-foreground">{action.plannedMinutes}m{action.dueDate ? ` · ${action.dueDate}` : ''} · {actionStatusLabel(action.status)}</p>{action.definitionOfDone && <p className="mt-2 text-sm text-muted-foreground">Finish condition: {action.definitionOfDone}</p>}</div><div className="flex shrink-0 gap-1">{action.status === 'backlog' && <Button size="sm" variant="outline" onClick={() => updateStatus(action.id, 'today')}>Plan for today</Button>}{action.status === 'today' && <Button size="sm" variant="ghost" onClick={() => updateStatus(action.id, 'backlog')}>Move to backlog</Button>}{!['completed', 'cancelled'].includes(action.status) && <Button size="sm" variant="ghost" onClick={() => store.updateGoalAction(action.id, { status: 'cancelled' }).catch((error) => toast.error(error instanceof Error ? error.message : 'Could not archive step'))}>Archive</Button>}</div></LedgerRow>)}
+    <LedgerPanel><LedgerSectionLabel>Add a step</LedgerSectionLabel><LedgerMeta className="mt-1">Keep it small enough to start and finish in one focus block.</LedgerMeta><div className="mt-4 space-y-3"><div className="grid gap-2 sm:grid-cols-[1fr_110px]"><Input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Concrete work to do" /><div><Label>Minutes</Label><Input type="number" min={1} max={720} value={minutes} onChange={(event) => setMinutes(event.target.value)} /></div></div><div><Label>Finish condition <span className="font-normal text-muted-foreground">(optional)</span></Label><Input value={finishHint} onChange={(event) => setFinishHint(event.target.value)} placeholder="What would make this feel complete?" /></div><div className="grid gap-2 sm:grid-cols-2"><div><Label>Area</Label><select value={subdepartmentId} onChange={(event) => setSubdepartmentId(event.target.value)} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"><option value="">No category</option>{goal.department.subdepartments.map((sub) => <option key={sub.id} value={sub.id}>{sub.name}</option>)}</select></div><div><Label>Due</Label><Input type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} /></div></div><label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={planToday} onChange={(event) => setPlanToday(event.target.checked)} className="mt-0.5" /><span><span className="block">Plan for today</span><span className="text-xs text-muted-foreground">If off, it stays in backlog and will not enter the queue.</span></span></label><Button onClick={add} disabled={busy || !title.trim() || Number(minutes) <= 0}><Plus className="h-4 w-4" /> Add step</Button></div></LedgerPanel>
+  </div>
 }
 
 function outcomeState(goal: Goal, progress: number): 'positive' | 'risk' | 'neutral' {
@@ -121,55 +176,7 @@ function outcomeState(goal: Goal, progress: number): 'positive' | 'risk' | 'neut
   return progress + 0.12 < expected ? 'risk' : 'positive'
 }
 
-function GoalWorkbench({ goal, onBack }: { goal: Goal; onBack: () => void }) {
-  const [editing, setEditing] = useState(false)
-  const [title, setTitle] = useState(goal.title)
-  const [outcome, setOutcome] = useState(goal.outcome)
-  const progress = goalProgress(goal)
-
-  return (
-    <div className="mx-auto max-w-3xl space-y-6">
-      <Button variant="ghost" size="sm" onClick={onBack}><ArrowLeft className="h-4 w-4 mr-1" /> Work</Button>
-      <section>
-        <div className="flex items-start justify-between gap-4"><div className="min-w-0 flex-1"><p className="text-sm text-muted-foreground">{goal.department.name.replace('Department of ', '')}</p>{editing ? <div className="space-y-2 mt-2"><Input value={title} onChange={(event) => setTitle(event.target.value)} /><Textarea value={outcome} onChange={(event) => setOutcome(event.target.value)} rows={2} /><div className="flex gap-2"><Button size="sm" onClick={() => { store.updateGoal(goal.id, { title, outcome }).then(() => setEditing(false)).catch((error) => toast.error(error.message)) }}>Save</Button><Button size="sm" variant="ghost" onClick={() => { setTitle(goal.title); setOutcome(goal.outcome); setEditing(false) }}>Cancel</Button></div></div> : <><h1 className="ledger-page-title mt-1">{goal.title}</h1><p className="text-sm text-muted-foreground mt-2">{goal.outcome}</p></>}</div><div className="text-right"><p className="ledger-metric text-4xl text-[var(--growth)]">{Math.round(progress * 100)}%</p><p className="text-xs text-muted-foreground">{deadlineLabel(daysRemaining(goal.targetDate))}</p></div></div>
-        <div className="h-2 bg-muted rounded-full overflow-hidden mt-4"><div className="h-full bg-[var(--growth)]" style={{ width: `${progress * 100}%` }} /></div>
-        <div className="flex flex-wrap gap-2 mt-3">
-          {goal.status === 'active' ? <Button variant="outline" size="sm" onClick={() => store.updateGoal(goal.id, { status: 'paused' })}><Pause className="h-3.5 w-3.5 mr-1" /> Pause</Button> : <Button variant="outline" size="sm" onClick={() => store.updateGoal(goal.id, { status: 'active' })}><Play className="h-3.5 w-3.5 mr-1" /> Activate</Button>}
-          <Button variant="ghost" size="sm" onClick={() => setEditing(true)}>Edit</Button>
-          <Button variant="ghost" size="sm" onClick={() => store.updateGoal(goal.id, { status: 'completed' })}><Check className="h-3.5 w-3.5 mr-1" /> Complete</Button>
-          <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => { if (window.confirm('Archive this goal?')) store.updateGoal(goal.id, { status: 'abandoned' }) }}>Archive</Button>
-        </div>
-      </section>
-
-      <section className="space-y-3"><LedgerSectionLabel>Steps</LedgerSectionLabel><ActionsPanel goal={goal} /></section>
-    </div>
-  )
-}
-
-function ActionsPanel({ goal }: { goal: Goal }) {
-  const [title, setTitle] = useState('')
-  const [done, setDone] = useState('')
-  const [minutes, setMinutes] = useState('45')
-  const [dueDate, setDueDate] = useState(toKey(new Date()))
-  const [subdepartmentId, setSubdepartmentId] = useState(goal.department.subdepartments[0]?.id ?? '')
-  const [commit, setCommit] = useState(true)
-  const [busy, setBusy] = useState(false)
-  async function add() {
-    if (busy) return
-    setBusy(true)
-    try {
-      await store.addGoalAction({ goalId: goal.id, title, definitionOfDone: done || null, plannedMinutes: Number(minutes), context: 'focused', dueDate: dueDate || null, subdepartmentId: subdepartmentId || null, status: commit ? 'today' : 'backlog' })
-      setTitle(''); setDone('')
-      toast.success(commit ? 'Added to committed steps' : 'Step saved')
-    } catch (error) { toast.error(error instanceof Error ? error.message : 'Could not add step') }
-    finally { setBusy(false) }
-  }
-  const actions = [...goal.actions].sort((a, b) => statusOrder(a.status) - statusOrder(b.status))
-  return <div className="space-y-3">
-    {actions.filter((action) => action.status !== 'cancelled').map((action) => <LedgerRow key={action.id} className="flex items-start gap-3"><div className="flex-1"><p className={cn('text-sm font-medium', action.status === 'completed' && 'line-through text-muted-foreground')}>{action.title}</p><p className="text-xs text-muted-foreground mt-1">{action.plannedMinutes}m{action.dueDate ? ` · ${action.dueDate}` : ''} · {action.status === 'today' ? 'Committed' : action.status.replace('_', ' ')}</p>{action.definitionOfDone && <p className="text-sm text-muted-foreground mt-1">{action.definitionOfDone}</p>}</div><div className="flex gap-1">{action.status === 'backlog' && <Button size="sm" variant="outline" onClick={() => store.updateGoalAction(action.id, { status: 'today' }).catch((err) => toast.error(err.message))}>Commit</Button>}{!['completed', 'cancelled'].includes(action.status) && <Button size="sm" variant="ghost" onClick={() => store.updateGoalAction(action.id, { status: 'cancelled' }).catch((err) => toast.error(err.message))}>Archive</Button>}</div></LedgerRow>)}
-    <LedgerPanel><LedgerSectionLabel>Add step</LedgerSectionLabel><div className="mt-4 space-y-3"><div className="grid sm:grid-cols-[1fr_110px] gap-2"><Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Concrete work to do" /><div><Label>Minutes</Label><Input type="number" min={1} max={720} value={minutes} onChange={(e) => setMinutes(e.target.value)} /></div></div><Input value={done} onChange={(e) => setDone(e.target.value)} placeholder="Finished when… (optional)" /><div className="grid sm:grid-cols-2 gap-2"><div><Label>Area</Label><select value={subdepartmentId} onChange={(e) => setSubdepartmentId(e.target.value)} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"><option value="">No category</option>{goal.department.subdepartments.map((sub) => <option key={sub.id} value={sub.id}>{sub.name}</option>)}</select></div><div><Label>Due</Label><Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} /></div></div><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={commit} onChange={(e) => setCommit(e.target.checked)} /> Commit this step</label><Button onClick={add} disabled={busy || !title.trim() || Number(minutes) <= 0}><Plus className="h-4 w-4 mr-1" /> Add step</Button></div></LedgerPanel>
-  </div>
-}
-
 function deadlineLabel(days: number) { return days < 0 ? `${Math.abs(days)}d overdue` : days === 0 ? 'due today' : `${days}d remaining` }
+function sprintStatusLabel(status: string) { return status === 'active' ? 'Current' : status === 'completed' ? 'Finished' : status === 'paused' ? 'Paused' : 'Planned' }
+function actionStatusLabel(status: string) { return status === 'today' ? 'Planned for today' : status === 'in_progress' ? 'In focus' : status === 'completed' ? 'Finished' : 'Backlog' }
 function statusOrder(status: string) { return status === 'in_progress' ? 0 : status === 'today' ? 1 : status === 'backlog' ? 2 : 3 }
