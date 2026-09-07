@@ -25,8 +25,7 @@ export function NeutralBaselineManager() {
   return (
     <div className="space-y-3">
       <p className="text-xs text-muted-foreground">
-        Nothing is assumed. Log Sleep, Meals, Chores, and other neutral time through the universal
-        Log button. Pin an exact value only to correct or close a specific day.
+        Log neutral time through Log time. Pin a value only to correct a day.
       </p>
 
       {sorted.length > 0 && (

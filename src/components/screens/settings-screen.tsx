@@ -246,7 +246,7 @@ function DepartmentModulesCard({ departments }: { departments: ReturnType<typeof
     <Card>
       <CardHeader>
         <CardTitle className="text-sm">Department operating modules</CardTitle>
-        <CardDescription>Departments remain customizable containers. A module adds domain-specific language and workflow without splitting the goal system.</CardDescription>
+        <CardDescription>Choose the language for each department.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
         {departments.map((department) => (
