@@ -23,7 +23,6 @@ export function TodayScreen() {
   const { sprints } = useSprints()
   const openGoal = useUIStore((state) => state.openGoal)
   const [busy, setBusy] = useState<string | null>(null)
-  const [showAll, setShowAll] = useState(false)
   const [resizeAction, setResizeAction] = useState<GoalAction | null>(null)
   const [resizeMinutes, setResizeMinutes] = useState('')
   const activeSprint = sprints.find((sprint) => sprint.status === 'active')
@@ -36,7 +35,8 @@ export function TodayScreen() {
   const inSprint = activeSprint ? committed.filter(({ goal }) => sprintGoalIds.has(goal.id)) : committed
   const outsideSprint = activeSprint ? committed.filter(({ goal }) => !sprintGoalIds.has(goal.id)) : []
   const compact = inSprint.slice(0, 3)
-  const visible = showAll ? inSprint : compact
+  const outsideVisible = outsideSprint.slice(0, Math.max(0, 3 - compact.length))
+  const hiddenCount = Math.max(0, committed.length - compact.length - outsideVisible.length)
 
   async function start(action: GoalAction) {
     setBusy(action.id)
@@ -79,9 +79,9 @@ export function TodayScreen() {
     return <LedgerPanel className="work-tier1 flex min-h-64 flex-col items-center justify-center text-center"><Target className="h-7 w-7 text-muted-foreground" aria-hidden="true" /><LedgerSectionLabel className="mt-3">No active Outcomes</LedgerSectionLabel><LedgerMeta className="mt-1">Create an Outcome to decide what to do next.</LedgerMeta></LedgerPanel>
   }
 
-  const remaining = Math.max(0, inSprint.length - compact.length)
-  const openSteps = goals.filter((goal) => !activeSprint || sprintGoalIds.has(goal.id)).filter((goal) => !['completed', 'abandoned'].includes(goal.status)).reduce((count, goal) => count + goal.actions.filter((action) => !['completed', 'cancelled'].includes(action.status)).length, 0)
+  const openSteps = goals.filter((goal) => !activeSprint || sprintGoalIds.has(goal.id)).filter((goal) => !['completed', 'abandoned', 'archived'].includes(goal.status)).reduce((count, goal) => count + goal.actions.filter((action) => !['completed', 'cancelled', 'archived'].includes(action.status)).length, 0)
   const committedMinutes = inSprint.reduce((sum, item) => sum + item.action.plannedMinutes, 0)
+  const planGoalId = activeSprint?.goals[0]?.goalId ?? goals.find((goal) => goal.status === 'active')?.id
   const rowProps = { busy, onStart: start, onResize: resize, onBacklog: moveToBacklog }
   return (
     <>
@@ -91,10 +91,10 @@ export function TodayScreen() {
           <div className="text-right"><p className="ledger-metric text-2xl">{committedMinutes}m</p><LedgerMeta>planned</LedgerMeta></div>
         </div>
         <div className="mt-5">
-          {visible.length === 0 ? <div className="work-empty-state flex flex-wrap items-center justify-between gap-3"><div><p className="text-sm font-medium">Nothing committed for Today.</p><LedgerMeta className="mt-1">Choose one small Step from an Outcome when you are ready.</LedgerMeta></div>{activeSprint?.goals[0] && <Button variant="outline" onClick={() => openGoal(activeSprint.goals[0].goalId)}>Plan a Step</Button>}</div> : <div className="divide-y divide-border/70">{visible.map((item) => <StepRow key={item.action.id} item={item} {...rowProps} />)}</div>}
+          {compact.length === 0 ? <div className="work-empty-state flex flex-wrap items-center justify-between gap-3"><div><p className="text-sm font-medium">Nothing committed for Today.</p><LedgerMeta className="mt-1">Choose one small Step from an Outcome when you are ready.</LedgerMeta></div>{planGoalId && <Button variant="outline" onClick={() => openGoal(planGoalId)}>Plan a Step</Button>}</div> : <div className="divide-y divide-border/70">{compact.map((item) => <StepRow key={item.action.id} item={item} {...rowProps} />)}</div>}
         </div>
-        {remaining > 0 && <Button variant="ghost" size="sm" className="mt-4 px-0 text-muted-foreground" onClick={() => setShowAll((value) => !value)}>{showAll ? 'Show first 3 Steps' : `Show ${remaining} more planned Step${remaining === 1 ? '' : 's'}`}</Button>}
-        {outsideSprint.length > 0 && <details className="mt-5 border-t border-border/70 pt-4"><summary className="cursor-pointer text-xs font-medium text-muted-foreground">Outside current Sprint · {outsideSprint.length}</summary><div className="mt-3 divide-y divide-border/70">{outsideSprint.map((item) => <StepRow key={item.action.id} item={item} outsideSprint {...rowProps} />)}</div></details>}
+        {outsideVisible.length > 0 && <details className="mt-5 border-t border-border/70 pt-4"><summary className="cursor-pointer text-xs font-medium text-muted-foreground">Outside current Sprint · {outsideVisible.length}</summary><div className="mt-3 divide-y divide-border/70">{outsideVisible.map((item) => <StepRow key={item.action.id} item={item} outsideSprint {...rowProps} />)}</div></details>}
+        {hiddenCount > 0 && <LedgerMeta className="mt-4 border-t border-border/70 pt-4">{hiddenCount} more planned Step{hiddenCount === 1 ? '' : 's'} stay available in their Outcome. Today shows three total.</LedgerMeta>}
       </LedgerPanel>
       <Dialog open={Boolean(resizeAction)} onOpenChange={(open) => { if (!open && !busy) setResizeAction(null) }}>
         <DialogContent className="sm:max-w-sm"><DialogHeader><DialogTitle>Resize Step</DialogTitle><DialogDescription>Change the planned minutes without losing the Step.</DialogDescription></DialogHeader><FormField label="Planned minutes" required><Input type="number" min={1} max={720} value={resizeMinutes} onChange={(event) => setResizeMinutes(event.target.value)} /></FormField><DialogFooter><Button variant="ghost" onClick={() => setResizeAction(null)} disabled={Boolean(busy)}>Cancel</Button><Button onClick={saveResize} disabled={Boolean(busy)}>Save changes</Button></DialogFooter></DialogContent>

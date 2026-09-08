@@ -2,13 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { wouldExceedDay, workspaceTimeZone } from '@/lib/time-validation'
 import { dateKeyInTimeZone } from '@/lib/dates'
-
-type SessionDisposition =
-  | 'complete_step'
-  | 'stop_keep_today'
-  | 'stop_to_backlog'
-  | 'interrupted_keep_today'
-  | 'interrupted_to_backlog'
+import { sessionFinishState, type SessionDisposition } from '@/lib/session-state'
 
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}))
@@ -33,13 +27,13 @@ async function startSession(actionId: string) {
   return NextResponse.json({ session })
 }
 
-function normalizeOutcome(body: Record<string, unknown>): { status: 'completed' | 'interrupted' | 'abandoned'; disposition: SessionDisposition } {
+function normalizeOutcome(body: Record<string, unknown>): { status: 'completed' | 'interrupted'; disposition: SessionDisposition } {
   const disposition = String(body.disposition ?? '') as SessionDisposition
   if (disposition === 'complete_step') return { status: 'completed', disposition }
-  if (disposition === 'stop_to_backlog' || disposition === 'interrupted_to_backlog') return { status: 'abandoned', disposition }
+  if (disposition === 'stop_to_backlog' || disposition === 'interrupted_to_backlog') return { status: 'interrupted', disposition }
   if (disposition === 'stop_keep_today' || disposition === 'interrupted_keep_today') return { status: 'interrupted', disposition }
   const outcome = String(body.outcome ?? 'completed')
-  if (outcome === 'abandoned') return { status: 'abandoned', disposition: 'stop_to_backlog' }
+  if (outcome === 'abandoned') return { status: 'interrupted', disposition: 'stop_to_backlog' }
   if (outcome === 'interrupted') return { status: 'interrupted', disposition: 'interrupted_keep_today' }
   return { status: 'completed', disposition: 'complete_step' }
 }
@@ -47,7 +41,7 @@ function normalizeOutcome(body: Record<string, unknown>): { status: 'completed' 
 async function finishSession(body: Record<string, unknown>) {
   const sessionId = String(body.sessionId ?? '')
   const actualMinutes = Math.round(Number(body.actualMinutes ?? 0))
-  const { status: outcome } = normalizeOutcome(body)
+  const { status: outcome, disposition } = normalizeOutcome(body)
   const outputValue = body.resultNote ?? body.output
   const output = outputValue ? String(outputValue).trim().slice(0, 2000) : null
   const friction = body.friction ? String(body.friction).trim().slice(0, 1000) : null
@@ -63,38 +57,35 @@ async function finishSession(body: Record<string, unknown>) {
 
   const timeZone = await workspaceTimeZone()
   const sessionDate = dateKeyInTimeZone(session.startedAt, timeZone)
-  if (outcome !== 'abandoned' && await wouldExceedDay(sessionDate, actualMinutes, timeZone)) {
+  if (await wouldExceedDay(sessionDate, actualMinutes, timeZone)) {
     return NextResponse.json({ error: 'This Session would put the day above 24 hours' }, { status: 409 })
   }
 
   const result = await db.$transaction(async (tx) => {
-    let entryId: string | null = null
-    if (outcome !== 'abandoned') {
-      const entry = await tx.entry.create({
-        data: {
-          departmentId: session.action.goal.departmentId,
-          subdepartmentId: session.action.subdepartmentId,
-          entryTimestamp: session.startedAt,
-          durationMinutes: actualMinutes,
-          note: output,
-        },
-      })
-      entryId = entry.id
-    }
+    const entry = await tx.entry.create({
+      data: {
+        departmentId: session.action.goal.departmentId,
+        subdepartmentId: session.action.subdepartmentId,
+        entryTimestamp: session.startedAt,
+        durationMinutes: actualMinutes,
+        note: output,
+      },
+    })
 
     const updated = await tx.workSession.update({
       where: { id: sessionId },
-      data: { endedAt: new Date(), status: outcome, actualMinutes, output, friction, entryId },
+      data: { endedAt: new Date(), status: outcome, actualMinutes, output, friction, entryId: entry.id },
     })
-    await tx.goalAction.update({
+    const nextActionState = sessionFinishState(disposition)
+    const updatedAction = await tx.goalAction.update({
       where: { id: session.actionId },
       data: {
-        status: outcome === 'completed' ? 'completed' : outcome === 'interrupted' ? 'today' : 'backlog',
-        todayOrder: outcome === 'completed' || outcome === 'abandoned' ? null : session.action.todayOrder,
+        status: nextActionState.actionStatus,
+        ...(nextActionState.clearsTodayOrder ? { todayOrder: null } : {}),
         output,
       },
     })
-    return updated
+    return { session: updated, entry, action: updatedAction }
   })
-  return NextResponse.json({ session: result })
+  return NextResponse.json(result)
 }

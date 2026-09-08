@@ -4,6 +4,7 @@ import { dateKeysInRange, dayMetrics, rangeMetrics, type EntryWithSub } from '..
 import { goalProgressInfo } from '../src/lib/goal-metrics'
 import type { Goal } from '../src/lib/store'
 import { dateKeyInTimeZone, utcBoundsForDateRange } from '../src/lib/dates'
+import { sessionFinishState, type SessionDisposition } from '../src/lib/session-state'
 
 function entry(date: string, minutes: number, sleep = false): EntryWithSub {
   return {
@@ -89,5 +90,18 @@ test('workspace timezone owns calendar boundaries, including DST days', () => {
   const dst = utcBoundsForDateRange('2026-03-08', '2026-03-08', 'America/New_York')
   assert.equal(dst.start.toISOString(), '2026-03-08T05:00:00.000Z')
   assert.equal(dst.end.toISOString(), '2026-03-09T03:59:59.999Z')
+})
+
+test('every Session disposition creates an Entry and maps Step state explicitly', () => {
+  const cases: Array<[SessionDisposition, 'completed' | 'interrupted', 'completed' | 'today' | 'backlog', boolean]> = [
+    ['complete_step', 'completed', 'completed', true],
+    ['stop_keep_today', 'interrupted', 'today', false],
+    ['stop_to_backlog', 'interrupted', 'backlog', true],
+    ['interrupted_keep_today', 'interrupted', 'today', false],
+    ['interrupted_to_backlog', 'interrupted', 'backlog', true],
+  ]
+  for (const [disposition, sessionStatus, actionStatus, clearsTodayOrder] of cases) {
+    assert.deepEqual(sessionFinishState(disposition), { sessionStatus, actionStatus, clearsTodayOrder, createsEntry: true })
+  }
 })
 
