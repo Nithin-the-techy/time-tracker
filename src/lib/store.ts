@@ -605,6 +605,11 @@ export const store = {
     await this.refreshWork()
   },
 
+  async deleteGoalTarget(id: string) {
+    await deleteJson('/api/goal-targets', { id })
+    await this.refreshWork()
+  },
+
   async addGoalProblem(input: { goalId: string; targetId?: string | null; statement: string; evidence?: string | null; severity?: number }) {
     await postJson('/api/goal-problems', input)
     await this.refreshWork()
@@ -612,6 +617,11 @@ export const store = {
 
   async updateGoalProblem(id: string, input: Partial<Pick<GoalProblem, 'statement' | 'evidence' | 'severity' | 'status'>>) {
     await patchJson('/api/goal-problems', { id, ...input })
+    await this.refreshWork()
+  },
+
+  async deleteGoalProblem(id: string) {
+    await deleteJson('/api/goal-problems', { id })
     await this.refreshWork()
   },
 
