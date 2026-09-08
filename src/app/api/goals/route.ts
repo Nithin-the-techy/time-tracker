@@ -8,7 +8,7 @@ const VALID_STATUSES = new Set(['draft', 'active', 'paused', 'completed', 'aband
 const goalInclude = {
   department: { include: { subdepartments: { where: { isActive: true }, orderBy: { sortOrder: 'asc' as const } } } },
   targets: { include: { subdepartment: true }, orderBy: { sortOrder: 'asc' as const } },
-  problems: { orderBy: [{ status: 'asc' as const }, { severity: 'asc' as const }] },
+  problems: { where: { archivedAt: null }, orderBy: [{ status: 'asc' as const }, { severity: 'asc' as const }] },
   actions: {
     where: { deletedAt: null },
     include: { target: true, problem: true, subdepartment: true, sessions: { orderBy: { startedAt: 'desc' as const } } },

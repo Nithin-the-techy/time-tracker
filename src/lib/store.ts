@@ -145,6 +145,7 @@ export interface GoalProblem {
   status: 'open' | 'solved' | 'accepted'
   createdAt: string
   updatedAt: string
+  archivedAt: string | null
 }
 
 export interface WorkSession {

@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
         await tx.goalTarget.create({ data: { id: t.id, goalId: t.goalId, subdepartmentId: t.subdepartmentId ?? null, label: t.label, unit: t.unit ?? 'percent', targetValue: t.targetValue, currentValue: t.currentValue ?? 0, progressSource: t.progressSource ?? 'manual', weight: t.weight ?? 1, sortOrder: t.sortOrder ?? 0 } })
       }
       for (const p of body.goalProblems ?? []) {
-        await tx.goalProblem.create({ data: { id: p.id, goalId: p.goalId, targetId: p.targetId ?? null, statement: p.statement, evidence: p.evidence ?? null, severity: p.severity ?? 3, status: p.status ?? 'open', createdAt: new Date(p.createdAt ?? Date.now()) } })
+        await tx.goalProblem.create({ data: { id: p.id, goalId: p.goalId, targetId: p.targetId ?? null, statement: p.statement, evidence: p.evidence ?? null, severity: p.severity ?? 3, status: p.status ?? 'open', archivedAt: p.archivedAt ? new Date(p.archivedAt) : null, createdAt: new Date(p.createdAt ?? Date.now()) } })
       }
       for (const a of body.goalActions ?? []) {
         await tx.goalAction.create({ data: { id: a.id, goalId: a.goalId, targetId: a.targetId ?? null, problemId: a.problemId ?? null, subdepartmentId: a.subdepartmentId ?? null, title: a.title, context: a.context ?? 'deep', plannedMinutes: a.plannedMinutes ?? 25, dueDate: a.dueDate ?? null, status: a.status ?? 'backlog', todayOrder: a.todayOrder ?? null, definitionOfDone: a.definitionOfDone ?? null, output: a.output ?? null, createdAt: new Date(a.createdAt ?? Date.now()), archivedAt: a.archivedAt ? new Date(a.archivedAt) : null, deletedAt: a.deletedAt ? new Date(a.deletedAt) : null } })

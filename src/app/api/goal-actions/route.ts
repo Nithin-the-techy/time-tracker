@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
   }
   const problemId = body.problemId ? String(body.problemId) : null
   if (problemId) {
-    const problem = await db.goalProblem.findFirst({ where: { id: problemId, goalId } })
+    const problem = await db.goalProblem.findFirst({ where: { id: problemId, goalId, archivedAt: null } })
     if (!problem) return NextResponse.json({ error: 'problem does not belong to goal' }, { status: 400 })
   }
   const dueDate = body.dueDate ? String(body.dueDate) : null

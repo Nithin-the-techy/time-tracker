@@ -13,7 +13,9 @@ release that changes the Prisma schema is a two-part operation:
    `db push` for the release.
 3. On a fresh database, apply `00000000000000_baseline` followed by
    `20260908_operations_truth` with `pnpm db:deploy:pg`.
-4. Confirm the migration and deployment health, then run the critical
+4. For later schema additions, apply each reviewed migration after the backup;
+   the current blocker archive migration is `20260908_blocker_archive`.
+5. Confirm the migration and deployment health, then run the critical
    Sprint → Outcome → Step → Session → History flow with a cache-busting query.
 
 Never commit `DATABASE_URL`, `APP_PASSWORD`, `AUTH_SECRET`, or access tokens.

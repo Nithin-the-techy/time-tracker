@@ -261,6 +261,7 @@ type ArchivedData = {
   goals: Array<{ id: string; title: string; status: string; actions: Array<{ id: string; title: string }> }>
   actions: Array<{ id: string; title: string; goal: { title: string } }>
   entries: Array<{ id: string; entryTimestamp: string; durationMinutes: number; department: { name: string } }>
+  problems: Array<{ id: string; statement: string; goal: { title: string } }>
 }
 
 function ArchivedManager() {
@@ -275,7 +276,7 @@ function ArchivedManager() {
     fetch('/api/archive').then((response) => response.ok ? response.json() as Promise<ArchivedData> : null).then((value) => { if (current && value) setData(value) }).catch(() => undefined)
     return () => { current = false }
   }, [])
-  async function act(entity: 'goal' | 'action' | 'entry', id: string, operation: 'restore' | 'permanent') {
+  async function act(entity: 'goal' | 'action' | 'entry' | 'problem', id: string, operation: 'restore' | 'permanent') {
     if (operation === 'permanent' && !window.confirm('Permanently delete this record? Related history may be affected. This cannot be undone.')) return
     setBusy(true)
     try {
@@ -287,12 +288,13 @@ function ArchivedManager() {
     finally { setBusy(false) }
   }
   if (!data) return <p className="text-sm text-muted-foreground">Loading archived records…</p>
-  const total = data.goals.length + data.actions.length + data.entries.length
+  const total = data.goals.length + data.actions.length + data.entries.length + data.problems.length
   if (total === 0) return <p className="text-sm text-muted-foreground">Nothing is archived or deleted.</p>
   return <div className="space-y-5">
     {data.goals.map((goal) => <div key={`goal-${goal.id}`} className="flex items-start justify-between gap-3 border-b border-border/70 pb-3"><div className="min-w-0"><p className="text-sm font-medium truncate">Outcome · {goal.title}</p><p className="mt-1 text-xs text-muted-foreground">{goal.actions.length} related Steps · {goal.status}</p></div><div className="flex shrink-0 gap-2"><Button size="sm" variant="outline" disabled={busy} onClick={() => void act('goal', goal.id, 'restore')}>Restore</Button><Button size="sm" variant="ghost" disabled={busy} className="text-destructive" onClick={() => void act('goal', goal.id, 'permanent')}>Delete permanently</Button></div></div>)}
     {data.actions.map((action) => <div key={`action-${action.id}`} className="flex items-start justify-between gap-3 border-b border-border/70 pb-3"><div className="min-w-0"><p className="text-sm font-medium truncate">Step · {action.title}</p><p className="mt-1 text-xs text-muted-foreground truncate">{action.goal.title}</p></div><div className="flex shrink-0 gap-2"><Button size="sm" variant="outline" disabled={busy} onClick={() => void act('action', action.id, 'restore')}>Restore</Button><Button size="sm" variant="ghost" disabled={busy} className="text-destructive" onClick={() => void act('action', action.id, 'permanent')}>Delete permanently</Button></div></div>)}
     {data.entries.map((entry) => <div key={`entry-${entry.id}`} className="flex items-start justify-between gap-3 border-b border-border/70 pb-3"><div className="min-w-0"><p className="text-sm font-medium">Entry · {entry.department.name}</p><p className="mt-1 text-xs text-muted-foreground">{new Date(entry.entryTimestamp).toLocaleString()} · {entry.durationMinutes}m</p></div><div className="flex shrink-0 gap-2"><Button size="sm" variant="outline" disabled={busy} onClick={() => void act('entry', entry.id, 'restore')}>Restore</Button><Button size="sm" variant="ghost" disabled={busy} className="text-destructive" onClick={() => void act('entry', entry.id, 'permanent')}>Delete permanently</Button></div></div>)}
+    {data.problems.map((problem) => <div key={`problem-${problem.id}`} className="flex items-start justify-between gap-3 border-b border-border/70 pb-3"><div className="min-w-0"><p className="truncate text-sm font-medium">Blocker · {problem.statement}</p><p className="mt-1 truncate text-xs text-muted-foreground">{problem.goal.title}</p></div><div className="flex shrink-0 gap-2"><Button size="sm" variant="outline" disabled={busy} onClick={() => void act('problem', problem.id, 'restore')}>Restore</Button><Button size="sm" variant="ghost" disabled={busy} className="text-destructive" onClick={() => void act('problem', problem.id, 'permanent')}>Delete permanently</Button></div></div>)}
   </div>
 }
 

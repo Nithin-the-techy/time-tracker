@@ -32,7 +32,7 @@ export async function PATCH(req: NextRequest) {
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
   const existing = await db.goalProblem.findUnique({ where: { id } })
   if (!existing) return NextResponse.json({ error: 'blocker not found' }, { status: 404 })
-  const data: Record<string, string | number | null> = {}
+  const data: Record<string, string | number | null | Date> = {}
   if (body.statement !== undefined) data.statement = String(body.statement).trim().slice(0, 500)
   if (body.evidence !== undefined) data.evidence = body.evidence ? String(body.evidence).slice(0, 1000) : null
   if (body.severity !== undefined) data.severity = Math.min(5, Math.max(1, Math.round(Number(body.severity))))
@@ -48,6 +48,7 @@ export async function PATCH(req: NextRequest) {
     }
     data.targetId = targetId
   }
+  if (body.archivedAt !== undefined) data.archivedAt = body.archivedAt ? new Date(String(body.archivedAt)) : null
   const problem = await db.goalProblem.update({ where: { id }, data })
   return NextResponse.json({ problem })
 }
@@ -56,7 +57,7 @@ export async function DELETE(req: NextRequest) {
   const body = await req.json().catch(() => ({}))
   const id = String(body.id ?? '')
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
-  await db.goalProblem.delete({ where: { id } })
-  return NextResponse.json({ ok: true })
+  const problem = await db.goalProblem.update({ where: { id }, data: { archivedAt: new Date() } })
+  return NextResponse.json({ problem })
 }
 

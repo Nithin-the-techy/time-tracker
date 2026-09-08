@@ -153,12 +153,14 @@ model GoalProblem {
   status    String   @default("open") // open | solved | accepted
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  archivedAt DateTime?
 
   goal    Goal         @relation(fields: [goalId], references: [id], onDelete: Cascade)
   target  GoalTarget?  @relation(fields: [targetId], references: [id], onDelete: SetNull)
   actions GoalAction[]
 
   @@index([goalId, status])
+  @@index([archivedAt])
 }
 
 model GoalAction {
