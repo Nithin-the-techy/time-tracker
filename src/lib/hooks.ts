@@ -66,6 +66,21 @@ export function useSprints() {
   return { sprints: sprints ?? [], loading: !sprints }
 }
 
+/** The single joined Work read model used by Today, the navigator, and detail views. */
+export function useWorkModel() {
+  const { goals, loading: goalsLoading } = useGoals()
+  const { sprints, loading: sprintsLoading } = useSprints()
+  const goalById = new Map(goals.map((goal) => [goal.id, goal]))
+  const activeSprint = sprints.find((sprint) => sprint.status === 'active') ?? null
+  return {
+    goals,
+    sprints,
+    activeSprint,
+    goalById,
+    loading: goalsLoading || sprintsLoading,
+  }
+}
+
 export function useWorkspacePreference() {
   const preference = useStoreSlice((s) => s.preference)
   return { preference: preference ?? { timezone: 'UTC' }, loading: !preference }

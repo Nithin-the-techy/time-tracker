@@ -130,6 +130,8 @@ export interface GoalTarget {
   progressSource: 'manual' | 'productive_minutes' | 'completed_actions' | 'outputs'
   weight: number
   sortOrder: number
+  progressValue: number
+  progressRatio: number
   subdepartment: Subdepartment | null
 }
 

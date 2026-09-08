@@ -35,10 +35,14 @@ export async function GET() {
   const refreshedGoals = goals.map((goal) => ({
     ...goal,
     targets: goal.targets.map((target) => {
-      if (target.progressSource === 'productive_minutes') return { ...target, currentValue: productiveMinutes.get(target.id) ?? 0 }
-      if (target.progressSource === 'completed_actions') return { ...target, currentValue: goal.actions.filter((action) => action.targetId === target.id && action.status === 'completed').length }
-      if (target.progressSource === 'outputs') return { ...target, currentValue: goal.actions.filter((action) => action.targetId === target.id && action.status === 'completed' && Boolean(action.output?.trim())).length }
-      return target
+      const progressValue = target.progressSource === 'productive_minutes'
+        ? productiveMinutes.get(target.id) ?? 0
+        : target.progressSource === 'completed_actions'
+          ? goal.actions.filter((action) => action.targetId === target.id && action.status === 'completed').length
+          : target.progressSource === 'outputs'
+            ? goal.actions.filter((action) => action.targetId === target.id && action.status === 'completed' && Boolean(action.output?.trim())).length
+            : target.currentValue
+      return { ...target, currentValue: progressValue, progressValue, progressRatio: target.targetValue > 0 ? Math.min(1, Math.max(0, progressValue / target.targetValue)) : 0 }
     }),
   }))
   return NextResponse.json({ goals: refreshedGoals })

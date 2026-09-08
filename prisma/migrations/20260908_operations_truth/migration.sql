@@ -1,11 +1,11 @@
 -- Operations update: category-less logging and one Sprint membership per Outcome.
 -- Apply only after exporting a production JSON backup and reviewing duplicate links.
 ALTER TABLE "Entry" ALTER COLUMN "subdepartmentId" DROP NOT NULL;
-ALTER TABLE "Entry" ADD COLUMN "deletedAt" TIMESTAMP(3);
-ALTER TABLE "Goal" ADD COLUMN "archivedAt" TIMESTAMP(3);
-ALTER TABLE "Goal" ADD COLUMN "deletedAt" TIMESTAMP(3);
-ALTER TABLE "GoalAction" ADD COLUMN "archivedAt" TIMESTAMP(3);
-ALTER TABLE "GoalAction" ADD COLUMN "deletedAt" TIMESTAMP(3);
+ALTER TABLE "Entry" ADD COLUMN IF NOT EXISTS "deletedAt" TIMESTAMP(3);
+ALTER TABLE "Goal" ADD COLUMN IF NOT EXISTS "archivedAt" TIMESTAMP(3);
+ALTER TABLE "Goal" ADD COLUMN IF NOT EXISTS "deletedAt" TIMESTAMP(3);
+ALTER TABLE "GoalAction" ADD COLUMN IF NOT EXISTS "archivedAt" TIMESTAMP(3);
+ALTER TABLE "GoalAction" ADD COLUMN IF NOT EXISTS "deletedAt" TIMESTAMP(3);
 CREATE UNIQUE INDEX IF NOT EXISTS "SprintGoal_goalId_key" ON "SprintGoal"("goalId");
 CREATE INDEX IF NOT EXISTS "Entry_deletedAt_idx" ON "Entry"("deletedAt");
 CREATE INDEX IF NOT EXISTS "Goal_deletedAt_idx" ON "Goal"("deletedAt");
