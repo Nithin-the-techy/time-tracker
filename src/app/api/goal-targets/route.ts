@@ -8,9 +8,9 @@ export async function POST(req: NextRequest) {
   const goalId = String(body.goalId ?? '')
   const label = String(body.label ?? '').trim().slice(0, 120)
   const targetValue = Number(body.targetValue)
-  const currentValue = Number(body.currentValue ?? 0)
+  const requestedCurrentValue = Number(body.currentValue ?? 0)
   const source = String(body.progressSource ?? 'manual')
-  if (!goalId || !label || !Number.isFinite(targetValue) || targetValue <= 0 || !Number.isFinite(currentValue)) {
+  if (!goalId || !label || !Number.isFinite(targetValue) || targetValue <= 0 || !Number.isFinite(requestedCurrentValue)) {
     return NextResponse.json({ error: 'goal, label, and a positive target are required' }, { status: 400 })
   }
   if (!SOURCES.has(source)) return NextResponse.json({ error: 'invalid progress source' }, { status: 400 })
@@ -30,7 +30,9 @@ export async function POST(req: NextRequest) {
       label,
       unit: String(body.unit ?? 'percent').trim().slice(0, 30),
       targetValue,
-      currentValue: Math.max(0, currentValue),
+      // Derived Measures read their value from Entries or completed Steps.
+      // Never seed a second, conflicting source of truth from client input.
+      currentValue: source === 'manual' ? Math.max(0, requestedCurrentValue) : 0,
       progressSource: source,
       weight: Math.max(0.01, Number(body.weight ?? 1)),
       sortOrder: count,
@@ -43,6 +45,8 @@ export async function PATCH(req: NextRequest) {
   const body = await req.json().catch(() => ({}))
   const id = String(body.id ?? '')
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
+  const existing = await db.goalTarget.findUnique({ where: { id } })
+  if (!existing) return NextResponse.json({ error: 'measure not found' }, { status: 404 })
   const data: Record<string, string | number | null> = {}
   if (body.label !== undefined) data.label = String(body.label).trim().slice(0, 120)
   if (body.unit !== undefined) data.unit = String(body.unit).trim().slice(0, 30)
@@ -55,11 +59,13 @@ export async function PATCH(req: NextRequest) {
       data[key] = value
     }
   }
-  if (body.progressSource !== undefined) {
-    const source = String(body.progressSource)
-    if (!SOURCES.has(source)) return NextResponse.json({ error: 'invalid progress source' }, { status: 400 })
-    data.progressSource = source
+  const nextSource = body.progressSource === undefined ? existing.progressSource : String(body.progressSource)
+  if (!SOURCES.has(nextSource)) return NextResponse.json({ error: 'invalid progress source' }, { status: 400 })
+  if (body.currentValue !== undefined && nextSource !== 'manual') {
+    return NextResponse.json({ error: 'derived Measures cannot edit current value' }, { status: 400 })
   }
+  if (body.progressSource !== undefined) data.progressSource = nextSource
+  if (nextSource !== 'manual') data.currentValue = 0
   const target = await db.goalTarget.update({ where: { id }, data })
   return NextResponse.json({ target })
 }
