@@ -27,10 +27,14 @@ export function DepartmentFilter({ value, onChange }: DepartmentFilterProps) {
       </button>
       {departments.map((d) => {
         const active = value === d.id
+        const label = d.name.replace('Department of ', '')
+        const compactLabel = label === 'Infrastructure and Strategic Operations' ? 'Infrastructure & Ops' : label
         return (
           <button
             key={d.id}
             type="button"
+            title={label}
+            aria-label={label}
             onClick={() => onChange(d.id)}
             className={cn(
               'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border transition',
@@ -43,7 +47,7 @@ export function DepartmentFilter({ value, onChange }: DepartmentFilterProps) {
               className="inline-block h-2 w-2 rounded-full"
               style={{ backgroundColor: DEPARTMENT_COLORS[d.slug] ?? '#888' }}
             />
-            {d.name.replace('Department of ', '')}
+            {compactLabel}
           </button>
         )
       })}

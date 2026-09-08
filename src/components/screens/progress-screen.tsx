@@ -2,7 +2,8 @@
 
 // Progress tab — where you are right now and how the window is going.
 //
-// The hero row carries TWO equally big, window-independent numbers:
+// The hero row carries the actual productive-time metric first, with a smaller
+// symbolic GPP reference alongside it:
 //   Left   — GPP: every productive minute ever logged, averaged per tracked
 //            day, extended to a month, valued at GPP_DOLLARS_PER_HOUR.
 //            Calibrated so $1T/month = 14 productive hours every day — the
@@ -179,7 +180,7 @@ export function ProgressScreen() {
             All-time pace · GPP / month · symbolic
           </p>
           <div className="flex items-baseline gap-3 flex-wrap">
-            <h1 className="ledger-metric text-6xl text-[var(--growth)]">
+            <h1 className="ledger-metric text-4xl text-muted-foreground">
               {formatMoney(g.monthlyDollars)}
             </h1>
             <span className="text-sm text-muted-foreground">/ month</span>
