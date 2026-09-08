@@ -1,4 +1,4 @@
-import type { Goal, GoalTarget } from './store'
+import type { Goal, GoalAction, GoalTarget, WorkSession } from './store'
 
 export interface GoalProgressInfo {
   ratio: number | null
@@ -6,6 +6,19 @@ export interface GoalProgressInfo {
   totalSteps: number
   label: string
   hasMeasure: boolean
+}
+
+/** Canonical minutes are created by ended Sessions; a running Session is not logged yet. */
+export function sessionLoggedMinutes(session: Pick<WorkSession, 'status' | 'actualMinutes'>): number {
+  return session.status === 'running' ? 0 : Math.max(0, session.actualMinutes ?? 0)
+}
+
+export function actionLoggedMinutes(action: Pick<GoalAction, 'sessions'>): number {
+  return action.sessions.reduce((total, session) => total + sessionLoggedMinutes(session), 0)
+}
+
+export function goalLoggedMinutes(goal: Pick<Goal, 'actions'>): number {
+  return goal.actions.reduce((total, action) => total + actionLoggedMinutes(action), 0)
 }
 
 export function targetProgress(target: GoalTarget): number {

@@ -9,6 +9,8 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { FormField, LedgerMeta, LedgerPanel, LedgerRow, LedgerSectionLabel } from '@/components/quiet-ledger'
 import { useGoals, useSprints, store, type WorkSession, type Goal, type GoalAction } from '@/lib/hooks'
+import { actionLoggedMinutes } from '@/lib/goal-metrics'
+import { formatMinutes } from '@/lib/metrics'
 import { useUIStore } from '@/store/ui-store'
 import { toast } from 'sonner'
 
@@ -77,7 +79,7 @@ export function TodayScreen() {
   if (loading) return <LedgerPanel className="work-tier1 min-h-64" aria-label="Loading Today"><p className="text-sm text-muted-foreground">Loading Today…</p></LedgerPanel>
   if (running) return <RunningSession session={running.session} action={running.action} goalTitle={running.goal.title} availableSteps={committed.filter(({ action }) => action.id !== running.action.id).map(({ action, goal }) => ({ action, goalTitle: goal.title }))} />
   if (!goals.some((goal) => goal.status === 'active')) {
-    return <LedgerPanel className="work-tier1 flex min-h-64 flex-col items-center justify-center text-center"><Target className="h-7 w-7 text-muted-foreground" aria-hidden="true" /><LedgerSectionLabel className="mt-3">No active Outcomes</LedgerSectionLabel><LedgerMeta className="mt-1">Create an Outcome to decide what to do next.</LedgerMeta></LedgerPanel>
+    return <LedgerPanel className="work-tier1 flex min-h-64 flex-col items-center justify-center text-center"><Target className="h-7 w-7 text-muted-foreground" aria-hidden="true" /><LedgerSectionLabel className="mt-3">No active Outcomes</LedgerSectionLabel></LedgerPanel>
   }
 
   const openSteps = goals.filter((goal) => !activeSprint || sprintGoalIds.has(goal.id)).filter((goal) => !['completed', 'abandoned', 'archived'].includes(goal.status)).reduce((count, goal) => count + goal.actions.filter((action) => !['completed', 'cancelled', 'archived'].includes(action.status)).length, 0)
@@ -92,10 +94,10 @@ export function TodayScreen() {
           <div className="text-right"><p className="ledger-metric text-2xl">{committedMinutes}m</p><LedgerMeta>planned</LedgerMeta></div>
         </div>
         <div className="mt-5">
-          {compact.length === 0 ? <div className="work-empty-state flex flex-wrap items-center justify-between gap-3"><div><p className="text-sm font-medium">Nothing committed for Today.</p><LedgerMeta className="mt-1">Choose one small Step from an Outcome when you are ready.</LedgerMeta></div>{planGoalId && <Button variant="outline" onClick={() => openGoal(planGoalId)}>Plan a Step</Button>}</div> : <div className="divide-y divide-border/70">{compact.map((item) => <StepRow key={item.action.id} item={item} {...rowProps} />)}</div>}
+          {compact.length === 0 ? <div className="work-empty-state flex flex-wrap items-center justify-between gap-3"><p className="text-sm font-medium">Nothing committed for Today.</p>{planGoalId && <Button variant="outline" onClick={() => openGoal(planGoalId)}>Plan a Step</Button>}</div> : <div className="divide-y divide-border/70">{compact.map((item) => <StepRow key={item.action.id} item={item} {...rowProps} />)}</div>}
         </div>
         {outsideVisible.length > 0 && <details className="mt-5 border-t border-border/70 pt-4"><summary className="cursor-pointer text-xs font-medium text-muted-foreground">Outside current Sprint · {outsideVisible.length}</summary><div className="mt-3 divide-y divide-border/70">{outsideVisible.map((item) => <StepRow key={item.action.id} item={item} outsideSprint {...rowProps} />)}</div></details>}
-        {hiddenCount > 0 && <LedgerMeta className="mt-4 border-t border-border/70 pt-4">{hiddenCount} more planned Step{hiddenCount === 1 ? '' : 's'} stay available in their Outcome. Today shows three total.</LedgerMeta>}
+        {hiddenCount > 0 && <LedgerMeta className="mt-4 border-t border-border/70 pt-4">{hiddenCount} more planned Step{hiddenCount === 1 ? '' : 's'}</LedgerMeta>}
       </LedgerPanel>
       <Dialog open={Boolean(resizeAction)} onOpenChange={(open) => { if (!open && !busy) setResizeAction(null) }}>
         <DialogContent className="sm:max-w-sm"><DialogHeader><DialogTitle>Resize Step</DialogTitle><DialogDescription>Change the planned minutes without losing the Step.</DialogDescription></DialogHeader><FormField label="Planned minutes" required><Input type="number" min={1} max={720} value={resizeMinutes} onChange={(event) => setResizeMinutes(event.target.value)} /></FormField><DialogFooter><Button variant="ghost" onClick={() => setResizeAction(null)} disabled={Boolean(busy)}>Cancel</Button><Button onClick={saveResize} disabled={Boolean(busy)}>Save changes</Button></DialogFooter></DialogContent>
@@ -105,7 +107,8 @@ export function TodayScreen() {
 }
 
 function StepRow({ item: { goal, action }, busy, outsideSprint = false, onStart, onResize, onBacklog }: { item: StepItem; busy: string | null; outsideSprint?: boolean; onStart: (action: GoalAction) => void; onResize: (action: GoalAction) => void; onBacklog: (action: GoalAction) => void }) {
-  return <div className="work-row flex items-center gap-3 py-3 first:pt-0 last:pb-0"><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium leading-5">{action.title}</p><LedgerMeta className="mt-1 truncate">{goal.title} · {action.plannedMinutes}m{outsideSprint ? ' · Outside current Sprint' : ''}</LedgerMeta></div><Button size="sm" onClick={() => onStart(action)} disabled={busy === action.id}><Play className="h-3.5 w-3.5" /> Start</Button><DropdownMenu><DropdownMenuTrigger asChild><Button size="icon" variant="ghost" aria-label={`More options for ${action.title}`}><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuItem onSelect={() => onResize(action)}><RotateCcw /> Resize Step</DropdownMenuItem><DropdownMenuItem onSelect={() => onBacklog(action)}><Clock3 /> Move to backlog</DropdownMenuItem></DropdownMenuContent></DropdownMenu></div>
+  const loggedMinutes = actionLoggedMinutes(action)
+  return <div className="work-row flex items-center gap-3 py-3 first:pt-0 last:pb-0"><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium leading-5">{action.title}</p><LedgerMeta className="mt-1 truncate">{goal.title} · {action.plannedMinutes}m{loggedMinutes > 0 ? ` · ${formatMinutes(loggedMinutes)} logged` : ''}{outsideSprint ? ' · Outside current Sprint' : ''}</LedgerMeta></div><Button size="sm" onClick={() => onStart(action)} disabled={busy === action.id}><Play className="h-3.5 w-3.5" /> Start</Button><DropdownMenu><DropdownMenuTrigger asChild><Button size="icon" variant="ghost" aria-label={`More options for ${action.title}`}><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuItem onSelect={() => onResize(action)}><RotateCcw /> Resize Step</DropdownMenuItem><DropdownMenuItem onSelect={() => onBacklog(action)}><Clock3 /> Move to backlog</DropdownMenuItem></DropdownMenuContent></DropdownMenu></div>
 }
 
 export function RunningSession({ session, action, goalTitle, availableSteps = [] }: { session: WorkSession; action: GoalAction; goalTitle: string; availableSteps?: RecoveryStep[] }) {

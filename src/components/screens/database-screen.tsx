@@ -53,7 +53,9 @@ export function DatabaseScreen() {
     ? browseEntriesAll.filter((e) => e.departmentId === browseDeptFilter)
     : browseEntriesAll
 
-  const range = rangeMetrics(browseEntriesAll as unknown as EntryWithSub[], browseFrom, browseTo, allow, neutralEntries, blocks)
+  // Every range summary must follow the same department filter as the chart
+  // and ledger below; otherwise a filtered History view reports all-area totals.
+  const range = rangeMetrics(browseEntries as unknown as EntryWithSub[], browseFrom, browseTo, allow, neutralEntries, blocks)
 
   const buckets = useMemo(
     () => bucketsForRange(

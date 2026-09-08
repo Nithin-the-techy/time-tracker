@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { dateKeysInRange, dayMetrics, rangeMetrics, type EntryWithSub } from '../src/lib/metrics'
-import { goalProgressInfo } from '../src/lib/goal-metrics'
+import { actionLoggedMinutes, goalLoggedMinutes, goalProgressInfo, sessionLoggedMinutes } from '../src/lib/goal-metrics'
 import type { Goal } from '../src/lib/store'
 import { dateKeyInTimeZone, utcBoundsForDateRange } from '../src/lib/dates'
 import { sessionFinishState, type SessionDisposition } from '../src/lib/session-state'
@@ -82,6 +82,15 @@ test('an Outcome without Measures uses a Step count or an honest empty state', (
   assert.equal(empty.label, 'No progress measure yet')
   assert.equal(withSteps.label, '1 of 2 Steps done')
   assert.equal(withSteps.ratio, null)
+})
+
+test('Work exposes canonical ended Session minutes without counting a running Session', () => {
+  assert.equal(sessionLoggedMinutes({ status: 'running', actualMinutes: null }), 0)
+  assert.equal(sessionLoggedMinutes({ status: 'completed', actualMinutes: 5 }), 5)
+  assert.equal(sessionLoggedMinutes({ status: 'interrupted', actualMinutes: 3 }), 3)
+  const action = { sessions: [{ status: 'completed', actualMinutes: 5 }, { status: 'interrupted', actualMinutes: 3 }, { status: 'running', actualMinutes: null }] } as never
+  assert.equal(actionLoggedMinutes(action), 8)
+  assert.equal(goalLoggedMinutes({ actions: [action, { sessions: [{ status: 'abandoned', actualMinutes: 2 }] }] } as never), 10)
 })
 
 test('workspace timezone owns calendar boundaries, including DST days', () => {

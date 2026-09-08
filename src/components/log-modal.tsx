@@ -5,7 +5,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from '@/components/ui/dialog'
 import { useUIStore } from '@/store/ui-store'
 import { useDepartments } from '@/lib/hooks'
@@ -36,7 +35,6 @@ function LogFormInner({ presetDeptSlug, onSaved }: { presetDeptSlug: string | nu
     <>
       <DialogHeader>
         <DialogTitle>Log time</DialogTitle>
-        <DialogDescription>Use this for completed time that was not recorded by a running step.</DialogDescription>
       </DialogHeader>
       <div className="pt-2">
         <LogForm presetDepartmentId={presetDept?.id} onSaved={onSaved} />
