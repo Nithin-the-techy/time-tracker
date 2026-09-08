@@ -91,14 +91,14 @@ export function TodayScreen() {
   const rowProps = { busy, onStart: start, onResize: resize, onBacklog: moveToBacklog }
   return (
     <>
-      <LedgerPanel className="border-[var(--growth)]/35">
+      <LedgerPanel className="border-border bg-card/70 p-4">
       <div className="flex items-baseline justify-between gap-4">
         <div><LedgerSectionLabel>Today&apos;s queue</LedgerSectionLabel><LedgerMeta className="mt-1">{activeSprint ? activeSprint.name : 'Planned steps'}</LedgerMeta><LedgerMeta className="mt-1">{inSprint.length} planned of {openSteps} open steps</LedgerMeta></div>
         <div className="text-right"><p className="text-sm tabular-nums text-foreground">{committedMinutes}m</p><LedgerMeta>planned</LedgerMeta></div>
       </div>
       <div className="mt-4 space-y-3">
         {visible.length === 0 ? (
-          <div className="py-6 text-center"><p className="text-sm text-muted-foreground">{activeSprint ? 'No steps planned for this Sprint today.' : 'No steps planned today.'}</p>{activeSprint?.goals[0] && <Button className="mt-3" variant="outline" onClick={() => openGoal(activeSprint.goals[0].goalId)}>Add a step</Button>}</div>
+          <div className="py-5 text-center"><p className="text-sm text-muted-foreground">{activeSprint ? 'No steps planned for this Sprint today.' : 'No steps planned today.'}</p>{activeSprint?.goals[0] && <Button className="mt-3" variant="outline" onClick={() => openGoal(activeSprint.goals[0].goalId)}>Add a step</Button>}</div>
         ) : visible.map((item) => <StepRow key={item.action.id} item={item} {...rowProps} />)}
       </div>
       {remaining > 0 && <Button variant="ghost" size="sm" className="mt-3 px-0 text-muted-foreground" onClick={() => setShowAll((value) => !value)}>{showAll ? 'Show first 3 steps' : `Show ${remaining} more planned step${remaining === 1 ? '' : 's'}`}</Button>}

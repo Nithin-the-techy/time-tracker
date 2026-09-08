@@ -25,8 +25,8 @@ blocking and environmental enforcement remain external layers.
 ## The execution loop
 
 ```text
-Outcome -> measurable targets -> current gaps/problems -> next steps
-        -> focus session -> optional result note -> target progress -> review
+Outcome -> optional measures or blockers -> next steps
+        -> focus session -> optional result note -> measure progress -> review
                                          \-> interruption/recovery -> next step
 ```
 
@@ -65,11 +65,11 @@ Required:
 - department and operating module;
 - start and target date;
 - status: draft, active, paused, completed, or abandoned;
-- priority;
-- outcome statement: the observable state that means success.
+- priority.
 
 Optional:
 
+- supporting outcome detail;
 - parent goal, for long-horizon goals and projects;
 - why-now statement;
 - constraints;
@@ -78,9 +78,11 @@ Optional:
 A goal's percent is derived from its targets. It is never a manually invented
 confidence score.
 
-### Target
+### Measure (stored as `GoalTarget`)
 
-A measurable component of a goal. Targets make “100%” explicit.
+A measurable component of an outcome. The UI calls this a Measure so it is
+clear that it is optional structure, not a second task. Measures make “100%”
+explicit.
 
 - label, target value, current value, and unit;
 - progress source: manual, productive minutes, completed actions, or outputs;
@@ -94,18 +96,19 @@ Examples:
 - Research: three falsifiable experiments completed.
 - Engineering: exam generator MVP passes ten acceptance scenarios.
 
-### Problem
+### Blocker (stored as `GoalProblem`)
 
-A current gap that prevents a goal from reaching 100%.
+A current gap that prevents an outcome from reaching 100%.
 
 - concise statement;
 - severity and status;
 - optional target it blocks;
-- next step;
+- optional linked step;
 - evidence that would count as solved.
 
-Problems are not journal entries. Open problems without a next step appear as
-unresolved and block the goal's readiness indicator.
+Blockers are not journal entries. Open blockers stay visible until resolved or
+deliberately removed; a Step can link to one when that makes the next move
+clear.
 
 ### Step (stored as `GoalAction`)
 
