@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { ArrowLeft, Check, CirclePlus, MoreHorizontal, Pause, Play, Plus } from 'lucide-react'
+import { Archive, ArrowLeft, Check, CirclePlus, MoreHorizontal, Pause, Play, Plus, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -110,7 +110,7 @@ function ActionRows({ goal }: { goal: Goal }) {
   const [editContext, setEditContext] = useState('')
   const [editDone, setEditDone] = useState('')
   const [editSubdepartment, setEditSubdepartment] = useState('')
-  const actions = [...goal.actions].filter((action) => action.status !== 'cancelled').sort((a, b) => statusOrder(a.status) - statusOrder(b.status))
+  const actions = [...goal.actions].filter((action) => !['cancelled', 'archived'].includes(action.status)).sort((a, b) => statusOrder(a.status) - statusOrder(b.status))
   const plannedCount = goals.flatMap((item) => item.actions).filter((action) => action.status === 'today' || action.status === 'in_progress').length
   async function updateStatus(id: string, status: 'today' | 'backlog') {
     try { await store.updateGoalAction(id, { status }); toast.success(status === 'today' ? 'Step planned for Today' : 'Step moved to backlog') }

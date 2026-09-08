@@ -18,7 +18,7 @@ export function goalProgress(goal: Goal): number {
   // its measurable progress. Targets override this when the user wants a
   // more precise, weighted metric.
   if (goal.targets.length === 0) {
-    const actions = goal.actions.filter((action) => action.status !== 'cancelled')
+    const actions = goal.actions.filter((action) => !['cancelled', 'archived'].includes(action.status))
     if (actions.length === 0) return 0
     const planned = actions.reduce((sum, action) => sum + Math.max(1, action.plannedMinutes), 0)
     const completed = actions.filter((action) => action.status === 'completed').reduce((sum, action) => sum + Math.max(1, action.plannedMinutes), 0)
@@ -34,7 +34,7 @@ export function goalProgress(goal: Goal): number {
  * change merely because backlog work was added.
  */
 export function goalProgressInfo(goal: Goal): GoalProgressInfo {
-  const activeSteps = goal.actions.filter((action) => action.status !== 'cancelled')
+  const activeSteps = goal.actions.filter((action) => !['cancelled', 'archived'].includes(action.status))
   const completedSteps = activeSteps.filter((action) => action.status === 'completed').length
   if (goal.targets.length > 0) {
     const ratio = goalProgress(goal)

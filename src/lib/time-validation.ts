@@ -1,4 +1,5 @@
 import { db } from './db'
+import { utcBoundsForDateRange } from './dates'
 
 const DATE_KEY = /^\d{4}-\d{2}-\d{2}$/
 
@@ -14,14 +15,22 @@ export function validMinutes(value: unknown, maximum = 1440): number | null {
   return Number.isFinite(minutes) && minutes >= 1 && minutes <= maximum ? minutes : null
 }
 
-export async function wouldExceedDay(dateKey: string, addedMinutes: number): Promise<boolean> {
+export async function workspaceTimeZone(): Promise<string> {
+  const preference = await db.workspacePreference.findUnique({ where: { id: 1 }, select: { timezone: true } })
+  return preference?.timezone ?? 'UTC'
+}
+
+export async function wouldExceedDay(dateKey: string, addedMinutes: number, timeZone?: string): Promise<boolean> {
+  const zone = timeZone ?? await workspaceTimeZone()
+  const bounds = utcBoundsForDateRange(dateKey, dateKey, zone)
   const [entries, neutral, negative] = await Promise.all([
     db.entry.findMany({
       where: {
         entryTimestamp: {
-          gte: new Date(`${dateKey}T00:00:00.000Z`),
-          lte: new Date(`${dateKey}T23:59:59.999Z`),
+          gte: bounds.start,
+          lte: bounds.end,
         },
+        deletedAt: null,
       },
       select: { durationMinutes: true },
     }),

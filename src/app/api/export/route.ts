@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { dateKeyFromUtc } from '@/lib/dates'
 
 // GET /api/export — full app state as JSON for backup.
 export async function GET() {
-  const [departments, subdepartments, entries, weeklyReviews, weightChanges, rivals, rivalEstimates, unproductiveBlocks, dayAllowances, neutralEntries, goals, sprints, sprintGoals, goalTargets, goalProblems, goalActions, sessions] =
+  const [departments, subdepartments, entries, weeklyReviews, weightChanges, rivals, rivalEstimates, unproductiveBlocks, dayAllowances, neutralEntries, goals, sprints, sprintGoals, goalTargets, goalProblems, goalActions, sessions, preference] =
     await Promise.all([
       db.department.findMany(),
       db.subdepartment.findMany(),
@@ -22,13 +23,14 @@ export async function GET() {
       db.goalProblem.findMany(),
       db.goalAction.findMany(),
       db.workSession.findMany(),
+      db.workspacePreference.findUnique({ where: { id: 1 } }),
     ])
   return NextResponse.json({
-    version: 7,
+    version: 8,
     departments,
     subdepartments,
     entries: entries.map((e) => ({ ...e, entryTimestamp: e.entryTimestamp.toISOString(), createdAt: e.createdAt.toISOString() })),
-    weeklyReviews: weeklyReviews.map((r) => ({ ...r, weekStartDate: r.weekStartDate.toISOString().slice(0, 10), createdAt: r.createdAt.toISOString(), updatedAt: r.updatedAt.toISOString() })),
+    weeklyReviews: weeklyReviews.map((r) => ({ ...r, weekStartDate: dateKeyFromUtc(r.weekStartDate), createdAt: r.createdAt.toISOString(), updatedAt: r.updatedAt.toISOString() })),
     weightChanges: weightChanges.map((c) => ({ ...c, changedAt: c.changedAt.toISOString() })),
     rivals,
     rivalEstimates,
@@ -42,5 +44,6 @@ export async function GET() {
     goalProblems,
     goalActions,
     sessions,
+    preference: preference ? { timezone: preference.timezone } : null,
   })
 }

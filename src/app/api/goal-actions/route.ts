@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 
-const STATUSES = new Set(['backlog', 'today', 'in_progress', 'completed', 'cancelled'])
+const STATUSES = new Set(['backlog', 'today', 'in_progress', 'completed', 'cancelled', 'archived'])
 const DATE_KEY = /^\d{4}-\d{2}-\d{2}$/
 
 export async function POST(req: NextRequest) {
@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
   if (!goalId || !title || plannedMinutes < 1 || plannedMinutes > 720 || !STATUSES.has(status)) {
     return NextResponse.json({ error: 'goal, title, and planned minutes (1–720) are required' }, { status: 400 })
   }
-  const goal = await db.goal.findUnique({ where: { id: goalId } })
+  const goal = await db.goal.findFirst({ where: { id: goalId, deletedAt: null } })
   if (!goal) return NextResponse.json({ error: 'goal not found' }, { status: 400 })
 
   const subdepartmentId = body.subdepartmentId ? String(body.subdepartmentId) : null
@@ -63,9 +63,9 @@ export async function PATCH(req: NextRequest) {
   const body = await req.json().catch(() => ({}))
   const id = String(body.id ?? '')
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
-  const existing = await db.goalAction.findUnique({ where: { id }, include: { goal: true } })
+  const existing = await db.goalAction.findFirst({ where: { id, deletedAt: null }, include: { goal: true } })
   if (!existing) return NextResponse.json({ error: 'action not found' }, { status: 404 })
-  const data: Record<string, string | number | null> = {}
+  const data: Record<string, string | number | null | Date> = {}
   if (body.title !== undefined) data.title = String(body.title).trim().slice(0, 240)
   if (body.context !== undefined) data.context = String(body.context).trim().slice(0, 60)
   if (body.definitionOfDone !== undefined) data.definitionOfDone = body.definitionOfDone ? String(body.definitionOfDone).slice(0, 1000) : null
@@ -99,6 +99,8 @@ export async function PATCH(req: NextRequest) {
     if (status === 'backlog' || status === 'completed' || status === 'cancelled') data.todayOrder = null
     data.status = status
   }
+  if (body.status !== undefined && String(body.status) !== 'archived') data.archivedAt = null
+  if (body.status !== undefined && String(body.status) === 'archived') data.archivedAt = new Date()
   const action = await db.goalAction.update({ where: { id }, data })
   return NextResponse.json({ action })
 }
@@ -107,7 +109,7 @@ export async function DELETE(req: NextRequest) {
   const body = await req.json().catch(() => ({}))
   const id = String(body.id ?? '')
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
-  await db.goalAction.delete({ where: { id } })
+  await db.goalAction.update({ where: { id }, data: { status: 'archived', archivedAt: new Date(), deletedAt: new Date(), todayOrder: null } })
   return NextResponse.json({ ok: true })
 }
 

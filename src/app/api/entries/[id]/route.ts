@@ -4,7 +4,7 @@ import { db } from '@/lib/db'
 export async function DELETE(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params
   try {
-    await db.entry.delete({ where: { id } })
+    await db.entry.update({ where: { id }, data: { deletedAt: new Date() } })
     return NextResponse.json({ ok: true })
   } catch {
     return NextResponse.json({ error: 'not found' }, { status: 404 })

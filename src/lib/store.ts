@@ -111,8 +111,12 @@ export interface DayAllowance {
   neutralMinutes: number | null // null = default behavior
 }
 
+export interface WorkspacePreference {
+  timezone: string
+}
+
 export type GoalStatus = 'draft' | 'active' | 'paused' | 'completed' | 'abandoned' | 'archived'
-export type ActionStatus = 'backlog' | 'today' | 'in_progress' | 'completed' | 'cancelled'
+export type ActionStatus = 'backlog' | 'today' | 'in_progress' | 'completed' | 'cancelled' | 'archived'
 export type SessionDisposition = 'complete_step' | 'stop_keep_today' | 'stop_to_backlog' | 'interrupted_keep_today' | 'interrupted_to_backlog'
 
 export interface GoalTarget {
@@ -231,6 +235,7 @@ export interface AppState {
   allowances: DayAllowance[]
   goals: Goal[]
   sprints: Sprint[]
+  preference: WorkspacePreference
 }
 
 // --- Cache + subscription ---
@@ -314,6 +319,10 @@ export const store = {
     if (inflight.bootstrap !== undefined) return inflight.bootstrap as Promise<void>
     inflight.bootstrap = (async () => {
       try {
+        const browserTimeZone = typeof Intl !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone : 'UTC'
+        // Establish the workspace timezone before any date-bounded request so
+        // the first bootstrap cannot race a UTC fallback.
+        const preferenceRes = await getJson(`/api/workspace/preferences?timezone=${encodeURIComponent(browserTimeZone)}`)
         const [deptRes, rivalsRes, weightsRes, entriesRes, allowancesRes, blocksRes, neutralRes, goalsRes, sprintsRes] = await Promise.all([
           getJson('/api/departments'),
           getJson('/api/rivals'),
@@ -336,7 +345,9 @@ export const store = {
           neutralEntries: neutralRes.entries as NeutralEntry[],
           goals: goalsRes.goals as Goal[],
           sprints: sprintsRes.sprints as Sprint[],
+          preference: preferenceRes.preference as WorkspacePreference,
         }
+        if (typeof window !== 'undefined') window.localStorage.setItem('operations-workspace-timezone', (preferenceRes.preference as WorkspacePreference).timezone)
         notify()
       } finally {
         delete inflight.bootstrap
@@ -524,6 +535,13 @@ export const store = {
     await Promise.all([this.loadGoals(), this.loadSprints()])
   },
 
+  async updateWorkspaceTimeZone(timezone: string) {
+    const data = await patchJson('/api/workspace/preferences', { timezone })
+    cached.preference = data.preference as WorkspacePreference
+    if (typeof window !== 'undefined') window.localStorage.setItem('operations-workspace-timezone', cached.preference.timezone)
+    notify()
+  },
+
   async createSprint(input: { name: string; startDate: string; endDate: string; status?: SprintStatus; goalIds?: string[] }) {
     await postJson('/api/sprints', input)
     await this.refreshWork()
@@ -558,6 +576,11 @@ export const store = {
 
   async updateGoal(id: string, input: Partial<Pick<Goal, 'title' | 'outcome' | 'whyNow' | 'constraints' | 'priority' | 'status' | 'startDate' | 'targetDate'>>) {
     await patchJson(`/api/goals/${id}`, input)
+    await this.refreshWork()
+  },
+
+  async deleteGoal(id: string) {
+    await deleteJson(`/api/goals/${id}`)
     await this.refreshWork()
   },
 
@@ -608,6 +631,11 @@ export const store = {
 
   async updateGoalAction(id: string, input: Partial<Pick<GoalAction, 'title' | 'context' | 'plannedMinutes' | 'status' | 'definitionOfDone' | 'output' | 'dueDate' | 'subdepartmentId'>>) {
     await patchJson('/api/goal-actions', { id, ...input })
+    await this.refreshWork()
+  },
+
+  async deleteGoalAction(id: string) {
+    await deleteJson('/api/goal-actions', { id })
     await this.refreshWork()
   },
 

@@ -1,10 +1,11 @@
 'use client'
 
 import { Trash2 } from 'lucide-react'
-import { store } from '@/lib/hooks'
+import { store, useWorkspacePreference } from '@/lib/hooks'
 import { formatMinutes, entryTimeKey, type EntryWithSub } from '@/lib/metrics'
 import { bucketsForRange, type Granularity } from '@/lib/dates'
 import { DEPARTMENT_COLORS } from '@/lib/constants'
+import { dateKeyInTimeZone } from '@/lib/dates'
 
 interface BucketedLogListProps {
   entries: EntryWithSub[]
@@ -27,6 +28,7 @@ function dateFromKey(key: string): Date {
 }
 
 export function BucketedLogList({ entries, fromKey, toKey, granularity, deptId }: BucketedLogListProps) {
+  const { preference } = useWorkspacePreference()
   // Compute buckets covering the range.
   const from = dateFromKey(fromKey)
   const to = dateFromKey(toKey)
@@ -35,7 +37,7 @@ export function BucketedLogList({ entries, fromKey, toKey, granularity, deptId }
   // Group entries into buckets by entry date.
   const groups: BucketGroup[] = buckets.map((b) => {
     const bucketEntries = entries.filter((e) => {
-      const ek = e.entryTimestamp.slice(0, 10)
+      const ek = dateKeyInTimeZone(e.entryTimestamp, preference.timezone)
       return ek >= b.startKey && ek <= b.endKey
     })
     // Sort within bucket: newest first by timestamp.

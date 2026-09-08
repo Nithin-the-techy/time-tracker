@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { dateKeyFromUtc } from '@/lib/dates'
 
 // GET /api/weekly-reviews?weekStart=YYYY-MM-DD
 export async function GET(req: NextRequest) {
@@ -14,7 +15,7 @@ export async function GET(req: NextRequest) {
     review: review
       ? {
           id: review.id,
-          weekStartDate: review.weekStartDate.toISOString().slice(0, 10),
+          weekStartDate: dateKeyFromUtc(review.weekStartDate),
           whatMattered: review.whatMattered,
           bottleneck: review.bottleneck,
           nextChange: review.nextChange,
@@ -44,7 +45,7 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({
     review: {
       id: review.id,
-      weekStartDate: review.weekStartDate.toISOString().slice(0, 10),
+      weekStartDate: dateKeyFromUtc(review.weekStartDate),
       whatMattered: review.whatMattered,
       bottleneck: review.bottleneck,
       nextChange: review.nextChange,

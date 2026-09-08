@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { ArrowLeft, Plus, X, Save, Loader2 } from 'lucide-react'
 import { useUIStore } from '@/store/ui-store'
-import { useEntriesInRange, useDepartments, useAllowances, useNeutralEntries, store } from '@/lib/hooks'
+import { useEntriesInRange, useDepartments, useAllowances, useNeutralEntries, useWorkspacePreference, store } from '@/lib/hooks'
 import {
   subdepartmentShares,
   bucketSeries,
@@ -23,6 +23,7 @@ import {
   bucketsForRange,
   toKey,
   startOfWeek,
+  dateKeyInTimeZone,
   type Granularity,
 } from '@/lib/dates'
 import { HoursBarChart } from '@/components/charts/hours-bar-chart'
@@ -43,6 +44,7 @@ export function DepartmentPage({ slug }: { slug: string }) {
   const closeDeptPage = useUIStore((s) => s.closeDeptPage)
 
   const { entries: allEntries } = useEntriesInRange(deptFrom, deptTo)
+  const { preference } = useWorkspacePreference()
   const deptEntries = dept ? allEntries.filter((e) => e.departmentId === dept.id) : []
 
   const { allowances } = useAllowances()
@@ -50,7 +52,7 @@ export function DepartmentPage({ slug }: { slug: string }) {
   const allow = useMemo(() => allowanceMap(allowances), [allowances])
 
   const totalMinutes = deptEntries.reduce((a, e) => a + e.durationMinutes, 0)
-  const daysActive = new Set(deptEntries.map((e) => e.entryTimestamp.slice(0, 10))).size
+  const daysActive = new Set(deptEntries.map((e) => dateKeyInTimeZone(e.entryTimestamp, preference.timezone))).size
   const subShares = dept ? subdepartmentShares(deptEntries as unknown as EntryWithSub[], dept.id) : []
 
   const subdepartments = dept ? (departments.find((d) => d.id === dept.id)?.subdepartments ?? []) : []

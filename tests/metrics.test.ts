@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { dateKeysInRange, dayMetrics, rangeMetrics, type EntryWithSub } from '../src/lib/metrics'
 import { goalProgressInfo } from '../src/lib/goal-metrics'
 import type { Goal } from '../src/lib/store'
+import { dateKeyInTimeZone, utcBoundsForDateRange } from '../src/lib/dates'
 
 function entry(date: string, minutes: number, sleep = false): EntryWithSub {
   return {
@@ -80,5 +81,13 @@ test('an Outcome without Measures uses a Step count or an honest empty state', (
   assert.equal(empty.label, 'No progress measure yet')
   assert.equal(withSteps.label, '1 of 2 Steps done')
   assert.equal(withSteps.ratio, null)
+})
+
+test('workspace timezone owns calendar boundaries, including DST days', () => {
+  assert.equal(dateKeyInTimeZone('2026-09-07T18:29:59.999Z', 'Asia/Kolkata'), '2026-09-07')
+  assert.equal(dateKeyInTimeZone('2026-09-07T18:30:00.000Z', 'Asia/Kolkata'), '2026-09-08')
+  const dst = utcBoundsForDateRange('2026-03-08', '2026-03-08', 'America/New_York')
+  assert.equal(dst.start.toISOString(), '2026-03-08T05:00:00.000Z')
+  assert.equal(dst.end.toISOString(), '2026-03-09T03:59:59.999Z')
 })
 

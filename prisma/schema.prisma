@@ -51,6 +51,7 @@ model Entry {
   note            String?
   obsidianRef     String?
   createdAt       DateTime @default(now())
+  deletedAt       DateTime?
 
   department    Department    @relation(fields: [departmentId], references: [id])
   subdepartment Subdepartment? @relation(fields: [subdepartmentId], references: [id], onDelete: SetNull)
@@ -58,6 +59,7 @@ model Entry {
 
   @@index([entryTimestamp])
   @@index([departmentId])
+  @@index([deletedAt])
 }
 
 // One universal execution model. Department modules only change presentation
@@ -77,6 +79,8 @@ model Goal {
   reviewCadence String   @default("weekly")
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+  archivedAt    DateTime?
+  deletedAt     DateTime?
 
   department Department    @relation(fields: [departmentId], references: [id], onDelete: Cascade)
   targets    GoalTarget[]
@@ -86,6 +90,7 @@ model Goal {
 
   @@index([status, priority])
   @@index([departmentId])
+  @@index([deletedAt])
 }
 
 model Sprint {
@@ -172,6 +177,8 @@ model GoalAction {
   output           String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
+  archivedAt       DateTime?
+  deletedAt        DateTime?
 
   goal          Goal           @relation(fields: [goalId], references: [id], onDelete: Cascade)
   target        GoalTarget?    @relation(fields: [targetId], references: [id], onDelete: SetNull)
@@ -181,6 +188,7 @@ model GoalAction {
 
   @@index([status, todayOrder])
   @@index([goalId])
+  @@index([deletedAt])
 }
 
 model WorkSession {
@@ -201,6 +209,15 @@ model WorkSession {
 
   @@index([status, startedAt])
   @@map("FocusSession")
+}
+
+// Workspace-level display preferences. A singleton row keeps timezone
+// behavior shared across Work, Progress, History, and server-side queries.
+model WorkspacePreference {
+  id        Int      @id @default(1)
+  timezone  String   @default("UTC")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model WeeklyReview {

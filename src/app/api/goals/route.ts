@@ -10,6 +10,7 @@ const goalInclude = {
   targets: { include: { subdepartment: true }, orderBy: { sortOrder: 'asc' as const } },
   problems: { orderBy: [{ status: 'asc' as const }, { severity: 'asc' as const }] },
   actions: {
+    where: { deletedAt: null },
     include: { target: true, problem: true, subdepartment: true, sessions: { orderBy: { startedAt: 'desc' as const } } },
     orderBy: [{ status: 'asc' as const }, { todayOrder: 'asc' as const }, { createdAt: 'asc' as const }],
   },
@@ -17,12 +18,14 @@ const goalInclude = {
 
 export async function GET() {
   const goals = await db.goal.findMany({
+    where: { deletedAt: null },
     include: goalInclude,
     orderBy: [{ status: 'asc' }, { priority: 'asc' }, { targetDate: 'asc' }],
   })
   const targetIds = new Set(goals.flatMap((goal) => goal.targets.map((target) => target.id)))
   const productiveMinutes = new Map<string, number>()
   const linkedEntries = await db.entry.findMany({
+    where: { deletedAt: null },
     select: { durationMinutes: true, session: { select: { action: { select: { targetId: true } } } } },
   })
   for (const entry of linkedEntries) {

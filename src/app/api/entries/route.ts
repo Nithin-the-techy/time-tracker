@@ -1,23 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { isDateKey, validMinutes, wouldExceedDay } from '@/lib/time-validation'
+import { isDateKey, validMinutes, wouldExceedDay, workspaceTimeZone } from '@/lib/time-validation'
+import { dateKeyInTimeZone, utcBoundsForDateRange } from '@/lib/dates'
 
 // GET /api/entries?from=YYYY-MM-DD&to=YYYY-MM-DD
 export async function GET(req: NextRequest) {
   const url = new URL(req.url)
   const from = url.searchParams.get('from')
   const to = url.searchParams.get('to')
+  const timeZone = await workspaceTimeZone()
 
   const where: { entryTimestamp?: { gte?: Date; lte?: Date } } = {}
   if (from && to) {
+    const bounds = utcBoundsForDateRange(from, to, timeZone)
     where.entryTimestamp = {
-      gte: new Date(from + 'T00:00:00'),
-      lte: new Date(to + 'T23:59:59'),
+      gte: bounds.start,
+      lte: bounds.end,
     }
   }
 
   const entries = await db.entry.findMany({
-    where,
+    where: { ...where, deletedAt: null },
     include: {
       department: true,
       subdepartment: true,
@@ -120,9 +123,10 @@ export async function POST(req: NextRequest) {
   if (isNaN(ts.getTime())) {
     return NextResponse.json({ error: 'invalid entryTimestamp' }, { status: 400 })
   }
-  const dateKey = String(body.entryTimestamp ?? '').slice(0, 10)
+  const timeZone = await workspaceTimeZone()
+  const dateKey = dateKeyInTimeZone(ts, timeZone)
   if (!isDateKey(dateKey)) return NextResponse.json({ error: 'timestamp must start with a valid YYYY-MM-DD date' }, { status: 400 })
-  if (await wouldExceedDay(dateKey, durationMinutes)) {
+  if (await wouldExceedDay(dateKey, durationMinutes, timeZone)) {
     return NextResponse.json({ error: 'This log would put the day above 24 hours' }, { status: 409 })
   }
 
@@ -170,6 +174,6 @@ export async function DELETE(req: NextRequest) {
   const body = await req.json().catch(() => ({}))
   const id = String(body.id ?? '')
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
-  await db.entry.delete({ where: { id } })
+  await db.entry.update({ where: { id }, data: { deletedAt: new Date() } })
   return NextResponse.json({ ok: true })
 }

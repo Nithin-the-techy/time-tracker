@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Loader2, Save, Plus, Trash2, Download, Upload, AlertTriangle, X, LogOut } from 'lucide-react'
-import { useDepartments, useRivals, store } from '@/lib/hooks'
+import { useDepartments, useRivals, useWorkspacePreference, store } from '@/lib/hooks'
 import { DEPARTMENT_COLORS } from '@/lib/constants'
 import { NeutralBaselineManager } from '@/components/neutral-baseline-manager'
 import { toast } from 'sonner'
@@ -27,15 +27,15 @@ export function SettingsScreen() {
   const { departments } = useDepartments()
   const { rivals } = useRivals()
   const fileRef = useRef<HTMLInputElement>(null)
-  const settingsFocus = useUIStore((state) => state.settingsFocus)
-  const clearSettingsFocus = useUIStore((state) => state.clearSettingsFocus)
+  const settingsSection = useUIStore((state) => state.settingsSection)
+  const clearSettingsSection = useUIStore((state) => state.clearSettingsSection)
 
   useEffect(() => {
-    if (!settingsFocus) return
-    const target = document.getElementById(`settings-${settingsFocus}`)
+    if (!settingsSection) return
+    const target = document.getElementById(`settings-${settingsSection}`)
     target?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    clearSettingsFocus()
-  }, [settingsFocus, clearSettingsFocus])
+    clearSettingsSection()
+  }, [settingsSection, clearSettingsSection])
 
   function importJSON(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -66,6 +66,16 @@ export function SettingsScreen() {
         <h1 className="ledger-page-title mt-1">Settings</h1>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">Rules, categories, comparisons, and backups.</p>
       </div>
+
+      <Card id="settings-time">
+        <CardHeader>
+          <CardTitle className="text-sm">Time and calendar</CardTitle>
+          <CardDescription>Dates, Today, History, and daily limits use this workspace timezone.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <TimezoneSettings />
+        </CardContent>
+      </Card>
 
       {/* Sleep & neutral baseline */}
       <Card>
@@ -193,6 +203,16 @@ export function SettingsScreen() {
         </CardContent>
       </Card>
 
+      <Card id="settings-archived">
+        <CardHeader>
+          <CardTitle className="text-sm">Archived and deleted</CardTitle>
+          <CardDescription>Restore hidden work, or permanently remove it after reviewing what it contains.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ArchivedManager />
+        </CardContent>
+      </Card>
+
       <Card className="border-destructive/30">
         <CardHeader>
           <CardTitle className="text-sm">Clear activity data</CardTitle>
@@ -219,6 +239,61 @@ export function SettingsScreen() {
       </Card>
     </div>
   )
+}
+
+function TimezoneSettings() {
+  const { preference } = useWorkspacePreference()
+  const [timezone, setTimezone] = useState(preference.timezone)
+  const [saving, setSaving] = useState(false)
+  async function save() {
+    setSaving(true)
+    try { await store.updateWorkspaceTimeZone(timezone.trim()); toast.success('Workspace timezone updated') }
+    catch (error) { toast.error(error instanceof Error ? error.message : 'Could not update timezone') }
+    finally { setSaving(false) }
+  }
+  return <div className="flex flex-wrap items-end gap-3">
+    <div className="min-w-[260px] flex-1"><Label htmlFor="workspace-timezone" className="mb-2 block text-xs font-medium">IANA timezone</Label><Input id="workspace-timezone" value={timezone} onChange={(event) => setTimezone(event.target.value)} placeholder="Asia/Kolkata" /></div>
+    <Button variant="outline" onClick={() => void save()} disabled={saving || !timezone.trim() || timezone === preference.timezone}>{saving ? 'Saving…' : 'Save timezone'}</Button>
+  </div>
+}
+
+type ArchivedData = {
+  goals: Array<{ id: string; title: string; status: string; actions: Array<{ id: string; title: string }> }>
+  actions: Array<{ id: string; title: string; goal: { title: string } }>
+  entries: Array<{ id: string; entryTimestamp: string; durationMinutes: number; department: { name: string } }>
+}
+
+function ArchivedManager() {
+  const [data, setData] = useState<ArchivedData | null>(null)
+  const [busy, setBusy] = useState(false)
+  async function load() {
+    const response = await fetch('/api/archive')
+    if (response.ok) setData(await response.json() as ArchivedData)
+  }
+  useEffect(() => {
+    let current = true
+    fetch('/api/archive').then((response) => response.ok ? response.json() as Promise<ArchivedData> : null).then((value) => { if (current && value) setData(value) }).catch(() => undefined)
+    return () => { current = false }
+  }, [])
+  async function act(entity: 'goal' | 'action' | 'entry', id: string, operation: 'restore' | 'permanent') {
+    if (operation === 'permanent' && !window.confirm('Permanently delete this record? Related history may be affected. This cannot be undone.')) return
+    setBusy(true)
+    try {
+      const response = await fetch('/api/archive', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ entity, id, operation }) })
+      if (!response.ok) throw new Error('Could not update archived record')
+      await load()
+      toast.success(operation === 'restore' ? 'Record restored' : 'Record permanently deleted')
+    } catch (error) { toast.error(error instanceof Error ? error.message : 'Could not update archived record') }
+    finally { setBusy(false) }
+  }
+  if (!data) return <p className="text-sm text-muted-foreground">Loading archived records…</p>
+  const total = data.goals.length + data.actions.length + data.entries.length
+  if (total === 0) return <p className="text-sm text-muted-foreground">Nothing is archived or deleted.</p>
+  return <div className="space-y-5">
+    {data.goals.map((goal) => <div key={`goal-${goal.id}`} className="flex items-start justify-between gap-3 border-b border-border/70 pb-3"><div className="min-w-0"><p className="text-sm font-medium truncate">Outcome · {goal.title}</p><p className="mt-1 text-xs text-muted-foreground">{goal.actions.length} related Steps · {goal.status}</p></div><div className="flex shrink-0 gap-2"><Button size="sm" variant="outline" disabled={busy} onClick={() => void act('goal', goal.id, 'restore')}>Restore</Button><Button size="sm" variant="ghost" disabled={busy} className="text-destructive" onClick={() => void act('goal', goal.id, 'permanent')}>Delete permanently</Button></div></div>)}
+    {data.actions.map((action) => <div key={`action-${action.id}`} className="flex items-start justify-between gap-3 border-b border-border/70 pb-3"><div className="min-w-0"><p className="text-sm font-medium truncate">Step · {action.title}</p><p className="mt-1 text-xs text-muted-foreground truncate">{action.goal.title}</p></div><div className="flex shrink-0 gap-2"><Button size="sm" variant="outline" disabled={busy} onClick={() => void act('action', action.id, 'restore')}>Restore</Button><Button size="sm" variant="ghost" disabled={busy} className="text-destructive" onClick={() => void act('action', action.id, 'permanent')}>Delete permanently</Button></div></div>)}
+    {data.entries.map((entry) => <div key={`entry-${entry.id}`} className="flex items-start justify-between gap-3 border-b border-border/70 pb-3"><div className="min-w-0"><p className="text-sm font-medium">Entry · {entry.department.name}</p><p className="mt-1 text-xs text-muted-foreground">{new Date(entry.entryTimestamp).toLocaleString()} · {entry.durationMinutes}m</p></div><div className="flex shrink-0 gap-2"><Button size="sm" variant="outline" disabled={busy} onClick={() => void act('entry', entry.id, 'restore')}>Restore</Button><Button size="sm" variant="ghost" disabled={busy} className="text-destructive" onClick={() => void act('entry', entry.id, 'permanent')}>Delete permanently</Button></div></div>)}
+  </div>
 }
 
 function SubWeightRow({ subdepartmentId, slug, name, currentWeight }: {

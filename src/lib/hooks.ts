@@ -2,9 +2,10 @@
 
 import { useEffect, useSyncExternalStore } from 'react'
 import { store, type AppState } from '@/lib/store'
+import { dateKeyInTimeZone } from '@/lib/dates'
 
 // Re-export the model types — components import them from here.
-export type { Entry, Department, Subdepartment, DayAllowance, NeutralEntry, UnproductiveBlock, Goal, GoalTarget, GoalProblem, GoalAction, WorkSession, SessionDisposition, Sprint, SprintGoal } from '@/lib/store'
+export type { Entry, Department, Subdepartment, DayAllowance, NeutralEntry, UnproductiveBlock, Goal, GoalTarget, GoalProblem, GoalAction, WorkSession, SessionDisposition, Sprint, SprintGoal, WorkspacePreference } from '@/lib/store'
 
 export function useBootstrap() {
   useEffect(() => {
@@ -65,16 +66,22 @@ export function useSprints() {
   return { sprints: sprints ?? [], loading: !sprints }
 }
 
+export function useWorkspacePreference() {
+  const preference = useStoreSlice((s) => s.preference)
+  return { preference: preference ?? { timezone: 'UTC' }, loading: !preference }
+}
+
 // Range-bounded view. Serves from cache and refreshes in the background.
 export function useEntriesInRange(from: string, to: string) {
   const entries = useStoreSlice((s) => s.entries) ?? []
+  const timezone = useStoreSlice((s) => s.preference)?.timezone ?? 'UTC'
 
   useEffect(() => {
     store.loadEntries(from, to).catch(console.error)
   }, [from, to])
 
   const filtered = entries.filter((e) => {
-    const ek = e.entryTimestamp.slice(0, 10)
+    const ek = dateKeyInTimeZone(e.entryTimestamp, timezone)
     return ek >= from && ek <= to
   })
 

@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
         await tx.subdepartment.create({ data: { id: s.id, departmentId: s.departmentId, name: s.name, isActive: s.isActive ?? true, sortOrder: s.sortOrder ?? 0, valueWeight: s.valueWeight ?? 1 } })
       }
       for (const g of body.goals ?? []) {
-        await tx.goal.create({ data: { id: g.id, departmentId: g.departmentId, title: g.title, outcome: g.outcome, whyNow: g.whyNow ?? null, constraints: g.constraints ?? null, moduleKey: g.moduleKey ?? 'generic', status: g.status ?? 'active', priority: g.priority ?? 3, startDate: g.startDate, targetDate: g.targetDate, reviewCadence: g.reviewCadence ?? 'weekly', createdAt: new Date(g.createdAt ?? Date.now()) } })
+        await tx.goal.create({ data: { id: g.id, departmentId: g.departmentId, title: g.title, outcome: g.outcome, whyNow: g.whyNow ?? null, constraints: g.constraints ?? null, moduleKey: g.moduleKey ?? 'generic', status: g.status ?? 'active', priority: g.priority ?? 3, startDate: g.startDate, targetDate: g.targetDate, reviewCadence: g.reviewCadence ?? 'weekly', createdAt: new Date(g.createdAt ?? Date.now()), archivedAt: g.archivedAt ? new Date(g.archivedAt) : null, deletedAt: g.deletedAt ? new Date(g.deletedAt) : null } })
       }
       for (const s of body.sprints ?? []) {
         await tx.sprint.create({ data: { id: s.id, name: s.name, phase: s.phase ?? null, status: s.status ?? 'planned', startDate: s.startDate, endDate: s.endDate, notes: s.notes ?? null, createdAt: new Date(s.createdAt ?? Date.now()) } })
@@ -50,10 +50,10 @@ export async function POST(req: NextRequest) {
         await tx.goalProblem.create({ data: { id: p.id, goalId: p.goalId, targetId: p.targetId ?? null, statement: p.statement, evidence: p.evidence ?? null, severity: p.severity ?? 3, status: p.status ?? 'open', createdAt: new Date(p.createdAt ?? Date.now()) } })
       }
       for (const a of body.goalActions ?? []) {
-        await tx.goalAction.create({ data: { id: a.id, goalId: a.goalId, targetId: a.targetId ?? null, problemId: a.problemId ?? null, subdepartmentId: a.subdepartmentId ?? null, title: a.title, context: a.context ?? 'deep', plannedMinutes: a.plannedMinutes ?? 25, dueDate: a.dueDate ?? null, status: a.status ?? 'backlog', todayOrder: a.todayOrder ?? null, definitionOfDone: a.definitionOfDone ?? null, output: a.output ?? null, createdAt: new Date(a.createdAt ?? Date.now()) } })
+        await tx.goalAction.create({ data: { id: a.id, goalId: a.goalId, targetId: a.targetId ?? null, problemId: a.problemId ?? null, subdepartmentId: a.subdepartmentId ?? null, title: a.title, context: a.context ?? 'deep', plannedMinutes: a.plannedMinutes ?? 25, dueDate: a.dueDate ?? null, status: a.status ?? 'backlog', todayOrder: a.todayOrder ?? null, definitionOfDone: a.definitionOfDone ?? null, output: a.output ?? null, createdAt: new Date(a.createdAt ?? Date.now()), archivedAt: a.archivedAt ? new Date(a.archivedAt) : null, deletedAt: a.deletedAt ? new Date(a.deletedAt) : null } })
       }
       for (const e of body.entries ?? []) {
-        await tx.entry.create({ data: { id: e.id, departmentId: e.departmentId, subdepartmentId: e.subdepartmentId, entryTimestamp: new Date(e.entryTimestamp), durationMinutes: e.durationMinutes, note: e.note ?? null, obsidianRef: e.obsidianRef ?? null, createdAt: new Date(e.createdAt ?? Date.now()) } })
+        await tx.entry.create({ data: { id: e.id, departmentId: e.departmentId, subdepartmentId: e.subdepartmentId, entryTimestamp: new Date(e.entryTimestamp), durationMinutes: e.durationMinutes, note: e.note ?? null, obsidianRef: e.obsidianRef ?? null, createdAt: new Date(e.createdAt ?? Date.now()), deletedAt: e.deletedAt ? new Date(e.deletedAt) : null } })
       }
       for (const s of body.sessions ?? body.focusSessions ?? []) {
         await tx.workSession.create({ data: { id: s.id, actionId: s.actionId, entryId: s.entryId ?? null, startedAt: new Date(s.startedAt), endedAt: s.endedAt ? new Date(s.endedAt) : null, status: s.status ?? 'completed', actualMinutes: s.actualMinutes ?? null, output: s.output ?? null, friction: s.friction ?? null, createdAt: new Date(s.createdAt ?? Date.now()) } })
@@ -78,6 +78,9 @@ export async function POST(req: NextRequest) {
       }
       for (const n of body.neutralEntries ?? []) {
         await tx.neutralEntry.create({ data: { id: n.id, date: n.date, activity: n.activity, minutes: n.minutes, note: n.note ?? null, createdAt: new Date(n.createdAt ?? Date.now()) } })
+      }
+      if (body.preference?.timezone) {
+        await tx.workspacePreference.upsert({ where: { id: 1 }, create: { id: 1, timezone: body.preference.timezone }, update: { timezone: body.preference.timezone } })
       }
     })
   } catch (error) {

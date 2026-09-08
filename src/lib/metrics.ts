@@ -22,6 +22,7 @@
 // once per range from totals — never averaged across days.
 
 import type { Entry, NeutralEntry, UnproductiveBlock } from './store'
+import { browserTimeZone, dateKeyInTimeZone } from './dates'
 import {
   GPP_DOLLARS_PER_HOUR,
   GPP_GOAL_DOLLARS,
@@ -127,11 +128,13 @@ export interface BucketDatum {
 }
 
 export function entryDateKey(e: { entryTimestamp: string }): string {
-  return e.entryTimestamp.slice(0, 10)
+  return dateKeyInTimeZone(e.entryTimestamp, browserTimeZone())
 }
 
 export function entryTimeKey(e: { entryTimestamp: string }): string {
-  return e.entryTimestamp.slice(11, 16)
+  const date = new Date(e.entryTimestamp)
+  if (Number.isNaN(date.getTime())) return ''
+  return new Intl.DateTimeFormat('en-GB', { timeZone: browserTimeZone(), hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(date)
 }
 
 // Sleep = Health → Sleep department entries + neutral logs labeled 'sleep'.

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { wouldExceedDay } from '@/lib/time-validation'
+import { wouldExceedDay, workspaceTimeZone } from '@/lib/time-validation'
+import { dateKeyInTimeZone } from '@/lib/dates'
 
 type SessionDisposition =
   | 'complete_step'
@@ -21,7 +22,7 @@ async function startSession(actionId: string) {
   if (!actionId) return NextResponse.json({ error: 'step required' }, { status: 400 })
   const running = await db.workSession.findFirst({ where: { status: 'running' } })
   if (running) return NextResponse.json({ error: 'A Session is already running', sessionId: running.id }, { status: 409 })
-  const action = await db.goalAction.findUnique({ where: { id: actionId } })
+  const action = await db.goalAction.findFirst({ where: { id: actionId, deletedAt: null } })
   if (!action || ['completed', 'cancelled'].includes(action.status)) {
     return NextResponse.json({ error: 'Step cannot be started' }, { status: 400 })
   }
@@ -60,8 +61,9 @@ async function finishSession(body: Record<string, unknown>) {
   })
   if (!session || session.status !== 'running') return NextResponse.json({ error: 'running Session not found' }, { status: 404 })
 
-  const sessionDate = session.startedAt.toISOString().slice(0, 10)
-  if (outcome !== 'abandoned' && await wouldExceedDay(sessionDate, actualMinutes)) {
+  const timeZone = await workspaceTimeZone()
+  const sessionDate = dateKeyInTimeZone(session.startedAt, timeZone)
+  if (outcome !== 'abandoned' && await wouldExceedDay(sessionDate, actualMinutes, timeZone)) {
     return NextResponse.json({ error: 'This Session would put the day above 24 hours' }, { status: 409 })
   }
 
