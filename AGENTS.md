@@ -47,6 +47,7 @@ If the user explicitly asks to plan first, do not edit product code, schema, pro
 
 ## Verification and deployment
 
+- Browser QA in this workspace uses the Codex in-app browser only. Do not open, use, or rely on Microsoft Edge for product inspection; close stale browser tabs before starting a fresh QA pass.
 - Inspect `git status`, the active branch, and remote before editing or replacing files.
 - Do not delete the repository or database to “start fresh” without resolving the exact target and confirming preservation requirements.
 - Run typecheck, focused lint, tests, and a production build for product changes.
