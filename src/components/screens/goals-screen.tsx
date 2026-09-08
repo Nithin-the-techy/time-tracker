@@ -47,7 +47,7 @@ export function GoalsScreen() {
 
       <section className="space-y-3" aria-labelledby="general-outcomes-heading">
         <div className="flex items-end justify-between gap-4"><LedgerSectionLabel id="general-outcomes-heading">Unassigned outcomes</LedgerSectionLabel><GeneralOutcomeDialog departments={departments} /></div>
-        {loading ? <p className="py-6 text-sm text-muted-foreground">Loading…</p> : generalGoals.length === 0 ? <LedgerPanel className="border-dashed bg-transparent py-5"><p className="text-sm text-muted-foreground">None.</p></LedgerPanel> : <div className="flex flex-wrap gap-2">{generalGoals.map((goal) => <OutcomeButton key={goal.id} goal={goal} onClick={() => openGoal(goal.id)} />)}</div>}
+        {loading ? <p className="py-6 text-sm text-muted-foreground">Loading…</p> : generalGoals.length === 0 ? <LedgerMeta>None yet.</LedgerMeta> : <div className="flex flex-wrap gap-2">{generalGoals.map((goal) => <OutcomeButton key={goal.id} goal={goal} onClick={() => openGoal(goal.id)} />)}</div>}
       </section>
 
       {activeGoal && <section id="outcome-detail" className="scroll-mt-6 border-t border-border pt-8" aria-label="Outcome details"><GoalWorkbench goal={activeGoal} onBack={closeGoal} /></section>}
@@ -60,10 +60,9 @@ function EmptySprintState() {
 }
 
 function SprintOutcomeGroup({ sprint, onOpenGoal }: { sprint: ReturnType<typeof useSprints>['sprints'][number]; onOpenGoal: (id: string) => void }) {
-  const current = sprint.status === 'active'
   return (
-    <section className={cn('rounded-md border border-border bg-card/70 p-4', current && 'border-l-2 border-l-[var(--growth)]')}>
-      <div className="flex items-start justify-between gap-4"><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><h3 className="truncate text-sm font-semibold">{sprint.name}</h3>{current && <span className="text-[11px] font-medium text-[var(--growth)]">Current</span>}</div><LedgerMeta className="mt-1">{sprint.phase || `${daysRemaining(sprint.endDate)}d remaining`} · {sprint.goals.length} outcome{sprint.goals.length === 1 ? '' : 's'}</LedgerMeta></div><span className="shrink-0 text-xs tabular-nums text-muted-foreground">{sprint.startDate} → {sprint.endDate}</span></div>
+    <section className="rounded-md border border-border bg-card/70 p-4">
+      <div className="flex items-start justify-between gap-4"><div className="min-w-0"><h3 className="truncate text-sm font-semibold">{sprint.name}</h3><LedgerMeta className="mt-1">{sprint.phase || `${daysRemaining(sprint.endDate)}d remaining`} · {sprint.goals.length} outcome{sprint.goals.length === 1 ? '' : 's'}</LedgerMeta></div><span className="shrink-0 text-xs tabular-nums text-muted-foreground">{sprint.startDate} → {sprint.endDate}</span></div>
       {sprint.goals.length === 0 ? <p className="mt-4 text-sm text-muted-foreground">No outcomes yet.</p> : <div className="mt-4 flex flex-wrap gap-2">{sprint.goals.map((link) => <OutcomeButton key={link.goalId} goal={link.goal} onClick={() => onOpenGoal(link.goalId)} />)}</div>}
     </section>
   )

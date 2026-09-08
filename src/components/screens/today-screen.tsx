@@ -98,7 +98,7 @@ export function TodayScreen() {
       </div>
       <div className="mt-4 space-y-3">
         {visible.length === 0 ? (
-          <div className="py-5 text-center"><p className="text-sm text-muted-foreground">{activeSprint ? 'No steps planned for this Sprint today.' : 'No steps planned today.'}</p>{activeSprint?.goals[0] && <Button className="mt-3" variant="outline" onClick={() => openGoal(activeSprint.goals[0].goalId)}>Add a step</Button>}</div>
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border/70 pt-3"><p className="text-sm text-muted-foreground">{activeSprint ? 'No steps planned for this Sprint today.' : 'No steps planned today.'}</p>{activeSprint?.goals[0] && <Button variant="outline" onClick={() => openGoal(activeSprint.goals[0].goalId)}>Plan a step</Button>}</div>
         ) : visible.map((item) => <StepRow key={item.action.id} item={item} {...rowProps} />)}
       </div>
       {remaining > 0 && <Button variant="ghost" size="sm" className="mt-3 px-0 text-muted-foreground" onClick={() => setShowAll((value) => !value)}>{showAll ? 'Show first 3 steps' : `Show ${remaining} more planned step${remaining === 1 ? '' : 's'}`}</Button>}
