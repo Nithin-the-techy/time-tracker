@@ -1,7 +1,7 @@
 'use client'
 
 import { Trash2 } from 'lucide-react'
-import { store, useWorkspacePreference } from '@/lib/hooks'
+import { store, useGoals, useWorkspacePreference } from '@/lib/hooks'
 import { formatMinutes, entryTimeKey, type EntryWithSub } from '@/lib/metrics'
 import { bucketsForRange, type Granularity } from '@/lib/dates'
 import { DEPARTMENT_COLORS } from '@/lib/constants'
@@ -128,6 +128,12 @@ function EntryRow({
 }) {
   const time = entryTimeKey(entry)
   const openGoal = useUIStore((state) => state.openGoal)
+  const setTab = useUIStore((state) => state.setTab)
+  const { goals } = useGoals()
+  const sessionRunning = goals.some((goal) => goal.actions.some((action) => action.sessions.some((session) => session.status === 'running')))
+  const sessionLabel = sessionRunning
+    ? 'Session running · Return to Session'
+    : `${entry.sessionContext?.sessionStatus === 'interrupted' ? 'Interrupted · ' : entry.sessionContext?.sessionStatus === 'stopped' ? 'Session ended · ' : 'Session · '}${entry.sessionContext?.sprintName ? `${entry.sessionContext.sprintName} · ` : ''}${entry.sessionContext?.goalTitle} · ${entry.sessionContext?.actionTitle}`
   return (
     <div
       className="flex items-start justify-between gap-2 text-sm border-l-2 pl-3 py-1 group"
@@ -146,7 +152,7 @@ function EntryRow({
           <span className="text-muted-foreground tabular-nums">{time || '—'}</span>
         </div>
         {entry.note && <p className="text-xs text-muted-foreground mt-0.5">{entry.note}</p>}
-        {entry.sessionContext && <button type="button" onClick={() => openGoal(entry.sessionContext!.goalId)} className="mt-1 block max-w-full truncate text-left text-[11px] text-muted-foreground underline-offset-2 hover:text-foreground hover:underline" aria-label={`Open Outcome ${entry.sessionContext.goalTitle}`}>{entry.sessionContext.sessionStatus === 'interrupted' ? 'Interrupted · ' : entry.sessionContext.sessionStatus === 'stopped' ? 'Session ended · ' : 'Session · '}{entry.sessionContext.sprintName ? `${entry.sessionContext.sprintName} · ` : ''}{entry.sessionContext.goalTitle} · {entry.sessionContext.actionTitle}</button>}
+        {entry.sessionContext && <button type="button" onClick={() => { if (sessionRunning) setTab('goals'); else openGoal(entry.sessionContext!.goalId) }} className="mt-1 block max-w-full truncate text-left text-[11px] text-muted-foreground underline-offset-2 hover:text-foreground hover:underline" aria-label={sessionRunning ? 'Return to running Session' : `Open Outcome ${entry.sessionContext.goalTitle}`}>{sessionLabel}</button>}
       </div>
       <button
         type="button"

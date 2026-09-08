@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { CheckCircle2, Clock3, MoreHorizontal, Pause, Play, RotateCcw, Target } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -76,6 +76,14 @@ export function TodayScreen() {
     finally { setBusy(null) }
   }
 
+  async function archive(action: GoalAction) {
+    if (!window.confirm(`Archive the Step “${action.title}”? You can restore it from Settings → Archived and deleted.`)) return
+    setBusy(action.id)
+    try { await store.deleteGoalAction(action.id); toast.success('Step archived') }
+    catch (error) { toast.error(error instanceof Error ? error.message : 'Could not archive Step') }
+    finally { setBusy(null) }
+  }
+
   if (loading) return <LedgerPanel className="work-tier1 min-h-64" aria-label="Loading Today"><p className="text-sm text-muted-foreground">Loading Today…</p></LedgerPanel>
   if (running) return <RunningSession session={running.session} action={running.action} goalTitle={running.goal.title} availableSteps={committed.filter(({ action }) => action.id !== running.action.id).map(({ action, goal }) => ({ action, goalTitle: goal.title }))} />
   if (!goals.some((goal) => goal.status === 'active')) {
@@ -85,7 +93,7 @@ export function TodayScreen() {
   const openSteps = committed.length
   const committedMinutes = committed.reduce((sum, item) => sum + item.action.plannedMinutes, 0)
   const planGoalId = activeSprint?.goals[0]?.goalId ?? goals.find((goal) => goal.status === 'active')?.id
-  const rowProps = { busy, onStart: start, onResize: resize, onBacklog: moveToBacklog }
+  const rowProps = { busy, onStart: start, onResize: resize, onBacklog: moveToBacklog, onArchive: archive, onOpenGoal: openGoal }
   return (
     <>
       <LedgerPanel className="work-tier1 p-5 md:p-6">
@@ -106,9 +114,9 @@ export function TodayScreen() {
   )
 }
 
-function StepRow({ item: { goal, action }, busy, outsideSprint = false, onStart, onResize, onBacklog }: { item: StepItem; busy: string | null; outsideSprint?: boolean; onStart: (action: GoalAction) => void; onResize: (action: GoalAction) => void; onBacklog: (action: GoalAction) => void }) {
+function StepRow({ item: { goal, action }, busy, outsideSprint = false, onStart, onResize, onBacklog, onArchive, onOpenGoal }: { item: StepItem; busy: string | null; outsideSprint?: boolean; onStart: (action: GoalAction) => void; onResize: (action: GoalAction) => void; onBacklog: (action: GoalAction) => void; onArchive: (action: GoalAction) => void; onOpenGoal: (id: string) => void }) {
   const loggedMinutes = actionLoggedMinutes(action)
-  return <div className="work-row flex items-center gap-3 py-3 first:pt-0 last:pb-0"><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium leading-5">{action.title}</p><LedgerMeta className="mt-1 truncate">{goal.title} · {action.plannedMinutes}m{loggedMinutes > 0 ? ` · ${formatMinutes(loggedMinutes)} logged` : ''}{outsideSprint ? ' · Outside current Sprint' : ''}</LedgerMeta></div><Button size="sm" onClick={() => onStart(action)} disabled={busy === action.id}><Play className="h-3.5 w-3.5" /> Start</Button><DropdownMenu><DropdownMenuTrigger asChild><Button size="icon" variant="ghost" aria-label={`More options for ${action.title}`}><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuItem onSelect={() => onResize(action)}><RotateCcw /> Resize Step</DropdownMenuItem><DropdownMenuItem onSelect={() => onBacklog(action)}><Clock3 /> Move to backlog</DropdownMenuItem></DropdownMenuContent></DropdownMenu></div>
+  return <div className="work-row flex items-center gap-3 py-3 first:pt-0 last:pb-0"><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium leading-5">{action.title}</p><LedgerMeta className="mt-1 truncate">{goal.title} · {action.plannedMinutes}m{loggedMinutes > 0 ? ` · ${formatMinutes(loggedMinutes)} logged` : ''}{outsideSprint ? ' · Outside current Sprint' : ''}</LedgerMeta></div><Button size="sm" onClick={() => onStart(action)} disabled={busy === action.id}><Play className="h-3.5 w-3.5" /> Start</Button><DropdownMenu><DropdownMenuTrigger asChild><Button size="icon" variant="ghost" aria-label={`More options for ${action.title}`}><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuItem onSelect={() => onOpenGoal(goal.id)}>Open Outcome</DropdownMenuItem><DropdownMenuItem onSelect={() => onResize(action)}><RotateCcw /> Resize Step</DropdownMenuItem><DropdownMenuItem onSelect={() => onBacklog(action)}><Clock3 /> Move to backlog</DropdownMenuItem><DropdownMenuSeparator /><DropdownMenuItem onSelect={() => onArchive(action)} className="text-red-400">Archive Step</DropdownMenuItem></DropdownMenuContent></DropdownMenu></div>
 }
 
 export function RunningSession({ session, action, goalTitle, availableSteps = [] }: { session: WorkSession; action: GoalAction; goalTitle: string; availableSteps?: RecoveryStep[] }) {
