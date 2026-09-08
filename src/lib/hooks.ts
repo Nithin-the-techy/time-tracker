@@ -26,9 +26,9 @@ export function useDepartments() {
   return { departments: depts ?? [], loading: !depts }
 }
 
-export function useAllEntries(): { entries: AppState['entries'] } {
+export function useAllEntries(): { entries: AppState['entries']; loading: boolean } {
   const entries = useStoreSlice((s) => s.entries)
-  return { entries: entries ?? [] }
+  return { entries: entries ?? [], loading: !entries }
 }
 
 export function useWeightChanges() {

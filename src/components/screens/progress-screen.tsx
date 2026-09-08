@@ -91,7 +91,7 @@ export function ProgressScreen() {
 
   const { entries: todayEntries } = useEntriesInRange(todayKey, todayKey)
   const { entries: winEntries } = useEntriesInRange(winFrom, winTo)
-  const { entries: allEntries } = useAllEntries()
+  const { entries: allEntries, loading: entriesLoading } = useAllEntries()
   const { rivals } = useRivals()
 
   // GPP + the trailing-30 headline: computed once from ALL data. Deliberately
@@ -164,23 +164,26 @@ export function ProgressScreen() {
   const windowName = mode === 'dayweek' ? 'last 7 days' : mode === 'month' ? 'last 30 days' : 'last 12 months'
   const hoursTitle = mode === 'dayweek' ? 'Hours by day' : mode === 'month' ? 'Hours by week' : 'Hours by month'
 
+  if (entriesLoading) {
+    return <div className="mx-auto max-w-5xl space-y-7" aria-label="Loading Progress"><div className="flex items-end justify-between gap-4"><div className="space-y-3"><div className="h-10 w-36 animate-pulse rounded bg-muted/30" /><div className="h-4 w-48 animate-pulse rounded bg-muted/20" /></div><div className="h-10 w-48 animate-pulse rounded bg-muted/20" /></div><div className="grid gap-6 md:grid-cols-2"><div className="h-32 animate-pulse rounded-lg border border-border bg-muted/20" /><div className="h-32 animate-pulse rounded-lg border border-border bg-muted/20" /></div><div className="h-72 animate-pulse rounded-lg border border-border bg-muted/20" /></div>
+  }
+
   return (
     <div className="mx-auto max-w-5xl space-y-7">
-      <div className="flex flex-wrap items-end justify-between gap-4">
+      <div>
         <div>
           <h1 className="ledger-page-title">Progress</h1>
           <p className="mt-2 text-sm text-muted-foreground">Recorded time at a glance.</p>
         </div>
-        <ModeSwitch value={mode} onChange={setProgressMode} />
       </div>
       {/* Hero row — these summaries remain independent of the chart window. */}
       <div className="flex flex-wrap items-start justify-between gap-x-10 gap-y-6">
         <div>
           <p className="text-sm text-muted-foreground mb-1" title={GPP_TOOLTIP}>
-            All-time pace · GPP / month · symbolic
+            GPP pace
           </p>
           <div className="flex items-baseline gap-3 flex-wrap">
-            <h1 className="ledger-metric text-4xl text-muted-foreground">
+            <h1 className="ledger-metric text-3xl text-muted-foreground">
               {formatMoney(g.monthlyDollars)}
             </h1>
             <span className="text-sm text-muted-foreground">/ month</span>
@@ -213,6 +216,8 @@ export function ProgressScreen() {
       </div>
 
       {/* Unified composition: donut(s) + stacked bars */}
+      <section aria-labelledby="chart-window-heading" className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-y border-border/70 py-3"><div><p id="chart-window-heading" className="text-sm font-medium">Chart window</p><p className="mt-1 text-xs text-muted-foreground">{windowName} · {winLabel}</p></div><ModeSwitch value={mode} onChange={setProgressMode} /></div>
       {mode === 'dayweek' ? (
         <>
           <div className="grid md:grid-cols-2 gap-3">
@@ -304,10 +309,11 @@ export function ProgressScreen() {
           </Card>
         </div>
       )}
+      </section>
 
       {/* Standings — monthly GPP, same treatment for everyone */}
       <section>
-        <p className="text-sm text-muted-foreground mb-3">Standings · symbolic GPP</p>
+        <p className="text-sm text-muted-foreground mb-3">Standings · GPP</p>
         <Card>
           <CardContent className="p-4">
             <StandingsChart data={standings} onManage={() => openSettingsSection('rivals')} />

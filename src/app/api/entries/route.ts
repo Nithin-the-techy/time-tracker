@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { isDateKey, validMinutes, wouldExceedDay, workspaceTimeZone } from '@/lib/time-validation'
-import { dateKeyInTimeZone, utcBoundsForDateRange } from '@/lib/dates'
+import { dateKeyInTimeZone, parseWorkspaceTimestamp, utcBoundsForDateRange } from '@/lib/dates'
 
 // GET /api/entries?from=YYYY-MM-DD&to=YYYY-MM-DD
 export async function GET(req: NextRequest) {
@@ -61,9 +61,11 @@ export async function GET(req: NextRequest) {
         valueWeight: e.subdepartment.valueWeight,
       } : null,
       sessionContext: e.session ? {
+        goalId: e.session.action.goal.id,
         actionTitle: e.session.action.title,
         goalTitle: e.session.action.goal.title,
         sprintName: e.session.action.goal.sprintLinks[0]?.sprint.name ?? null,
+        sessionStatus: e.session.status,
       } : null,
     })),
   })
@@ -119,11 +121,11 @@ export async function POST(req: NextRequest) {
     if (!sub) return NextResponse.json({ error: 'subdepartment does not belong to department' }, { status: 400 })
   }
 
-  const ts = new Date(body.entryTimestamp)
-  if (isNaN(ts.getTime())) {
+  const timeZone = await workspaceTimeZone()
+  const ts = parseWorkspaceTimestamp(body.entryTimestamp, timeZone)
+  if (!ts) {
     return NextResponse.json({ error: 'invalid entryTimestamp' }, { status: 400 })
   }
-  const timeZone = await workspaceTimeZone()
   const dateKey = dateKeyInTimeZone(ts, timeZone)
   if (!isDateKey(dateKey)) return NextResponse.json({ error: 'timestamp must start with a valid YYYY-MM-DD date' }, { status: 400 })
   if (await wouldExceedDay(dateKey, durationMinutes, timeZone)) {

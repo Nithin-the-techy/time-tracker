@@ -27,8 +27,23 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
   }
 
+  const sprintId = body.sprintId === null ? null : body.sprintId !== undefined ? String(body.sprintId) : undefined
+  if (sprintId) {
+    const sprint = await db.sprint.findUnique({ where: { id: sprintId }, select: { id: true, status: true } })
+    if (!sprint || sprint.status === 'archived') return NextResponse.json({ error: 'sprint not found' }, { status: 400 })
+  }
+
   if (body.status !== undefined && String(body.status) !== 'archived') data.archivedAt = null
-  const goal = await db.goal.update({ where: { id }, data })
+  const goal = sprintId === undefined
+    ? await db.goal.update({ where: { id }, data })
+    : await db.$transaction(async (tx) => {
+        await tx.sprintGoal.deleteMany({ where: { goalId: id } })
+        if (sprintId) {
+          const sortOrder = await tx.sprintGoal.count({ where: { sprintId } })
+          await tx.sprintGoal.create({ data: { sprintId, goalId: id, sortOrder } })
+        }
+        return tx.goal.update({ where: { id }, data })
+      })
   return NextResponse.json({ goal })
 }
 

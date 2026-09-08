@@ -199,7 +199,7 @@ model WorkSession {
   entryId       String?   @unique
   startedAt     DateTime  @default(now())
   endedAt       DateTime?
-  status        String    @default("running")
+  status        String    @default("running") // running | completed | stopped | interrupted | abandoned
   actualMinutes Int?
   output        String?
   friction      String?

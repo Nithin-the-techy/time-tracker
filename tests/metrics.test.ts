@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { dateKeysInRange, dayMetrics, rangeMetrics, type EntryWithSub } from '../src/lib/metrics'
 import { actionLoggedMinutes, goalLoggedMinutes, goalProgressInfo, sessionLoggedMinutes } from '../src/lib/goal-metrics'
 import type { Goal } from '../src/lib/store'
-import { dateKeyInTimeZone, utcBoundsForDateRange } from '../src/lib/dates'
+import { dateKeyInTimeZone, parseWorkspaceTimestamp, utcBoundsForDateRange } from '../src/lib/dates'
 import { sessionFinishState, type SessionDisposition } from '../src/lib/session-state'
 
 function entry(date: string, minutes: number, sleep = false): EntryWithSub {
@@ -64,6 +64,13 @@ test('ranges sum explicit negative and unknown independently', () => {
   assert.equal(metrics.unknown, 1260)
 })
 
+test('workspace timestamps keep local wall-clock logs on the selected day', () => {
+  const timestamp = parseWorkspaceTimestamp('2026-09-08T23:30:00', 'Asia/Kolkata')
+  assert.ok(timestamp)
+  assert.equal(timestamp.toISOString(), '2026-09-08T18:00:00.000Z')
+  assert.equal(dateKeyInTimeZone(timestamp, 'Asia/Kolkata'), '2026-09-08')
+})
+
 test('explicit Outcome Measures stay truthful when backlog Steps are added', () => {
   const goal = {
     targets: [{ targetValue: 10, currentValue: 5, weight: 1 }],
@@ -102,10 +109,10 @@ test('workspace timezone owns calendar boundaries, including DST days', () => {
 })
 
 test('every Session disposition creates an Entry and maps Step state explicitly', () => {
-  const cases: Array<[SessionDisposition, 'completed' | 'interrupted', 'completed' | 'today' | 'backlog', boolean]> = [
+  const cases: Array<[SessionDisposition, 'completed' | 'stopped' | 'interrupted', 'completed' | 'today' | 'backlog', boolean]> = [
     ['complete_step', 'completed', 'completed', true],
-    ['stop_keep_today', 'interrupted', 'today', false],
-    ['stop_to_backlog', 'interrupted', 'backlog', true],
+    ['stop_keep_today', 'stopped', 'today', false],
+    ['stop_to_backlog', 'stopped', 'backlog', true],
     ['interrupted_keep_today', 'interrupted', 'today', false],
     ['interrupted_to_backlog', 'interrupted', 'backlog', true],
   ]

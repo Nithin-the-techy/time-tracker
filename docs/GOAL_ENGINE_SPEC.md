@@ -128,7 +128,7 @@ large; the commitment list may not.
 ### Session
 
 An intentional start/stop record linked to an action. A session can be running,
-completed, interrupted, or abandoned.
+completed, stopped, interrupted, or abandoned.
 
 On start, the UI shows the step, elapsed time, and stop controls. A completed
 session can record a short result note, but there is no proof gate. Interrupted

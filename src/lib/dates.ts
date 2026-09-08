@@ -48,6 +48,18 @@ export function zonedDateTimeToUtc(dateKey: string, timeZone: string, hour = 0, 
   return new Date(guess + millisecond)
 }
 
+/** Parse a user-entered wall-clock timestamp in the workspace timezone. */
+export function parseWorkspaceTimestamp(value: unknown, timeZone: string): Date | null {
+  if (typeof value !== 'string' || !value.trim()) return null
+  const local = /^(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2})(?::(\d{2})(?:\.(\d{1,3}))?)?$/.exec(value.trim())
+  if (local) {
+    const milliseconds = local[5] ? Number(local[5].padEnd(3, '0')) : 0
+    return zonedDateTimeToUtc(local[1], timeZone, Number(local[2]), Number(local[3]), Number(local[4] ?? 0), milliseconds)
+  }
+  const parsed = new Date(value)
+  return Number.isNaN(parsed.getTime()) ? null : parsed
+}
+
 export function utcBoundsForDateRange(from: string, to: string, timeZone: string): { start: Date; end: Date } {
   return {
     start: zonedDateTimeToUtc(from, timeZone),

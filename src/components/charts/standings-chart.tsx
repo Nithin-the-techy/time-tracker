@@ -31,7 +31,7 @@ export function StandingsChart({ data, onManage }: { data: Standing[]; onManage?
               <span className={cn('text-sm truncate', r.isMe ? 'font-medium text-[var(--growth)]' : 'text-foreground')}>
                 {r.name}
               </span>
-              {r.isMe && <span className="text-[10px] text-muted-foreground">you</span>}
+              {r.isMe && r.name.toLowerCase() !== 'you' && <span className="text-[10px] text-muted-foreground">you</span>}
             </div>
             <span className={cn('text-sm tabular-nums', r.isMe ? 'text-[var(--growth)]' : 'text-foreground')}>
               {formatMoney(r.gppDollars)}

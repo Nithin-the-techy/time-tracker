@@ -44,9 +44,11 @@ export interface Entry {
     valueWeight: number
   } | null
   sessionContext?: {
+    goalId: string
     actionTitle: string
     goalTitle: string
     sprintName: string | null
+    sessionStatus: 'completed' | 'stopped' | 'interrupted' | 'abandoned' | 'running'
   } | null
 }
 
@@ -154,7 +156,7 @@ export interface WorkSession {
   entryId: string | null
   startedAt: string
   endedAt: string | null
-  status: 'running' | 'completed' | 'interrupted' | 'abandoned'
+  status: 'running' | 'completed' | 'stopped' | 'interrupted' | 'abandoned'
   actualMinutes: number | null
   output: string | null
   friction: string | null
@@ -579,6 +581,11 @@ export const store = {
 
   async updateGoal(id: string, input: Partial<Pick<Goal, 'title' | 'outcome' | 'whyNow' | 'constraints' | 'priority' | 'status' | 'startDate' | 'targetDate'>>) {
     await patchJson(`/api/goals/${id}`, input)
+    await this.refreshWork()
+  },
+
+  async setGoalSprint(goalId: string, sprintId: string | null) {
+    await patchJson(`/api/goals/${goalId}`, { sprintId })
     await this.refreshWork()
   },
 

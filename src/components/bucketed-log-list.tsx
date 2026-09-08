@@ -6,6 +6,7 @@ import { formatMinutes, entryTimeKey, type EntryWithSub } from '@/lib/metrics'
 import { bucketsForRange, type Granularity } from '@/lib/dates'
 import { DEPARTMENT_COLORS } from '@/lib/constants'
 import { dateKeyInTimeZone } from '@/lib/dates'
+import { useUIStore } from '@/store/ui-store'
 
 interface BucketedLogListProps {
   entries: EntryWithSub[]
@@ -126,6 +127,7 @@ function EntryRow({
   deptId?: string
 }) {
   const time = entryTimeKey(entry)
+  const openGoal = useUIStore((state) => state.openGoal)
   return (
     <div
       className="flex items-start justify-between gap-2 text-sm border-l-2 pl-3 py-1 group"
@@ -144,7 +146,7 @@ function EntryRow({
           <span className="text-muted-foreground tabular-nums">{time || '—'}</span>
         </div>
         {entry.note && <p className="text-xs text-muted-foreground mt-0.5">{entry.note}</p>}
-        {entry.sessionContext && <p className="text-[11px] text-muted-foreground mt-1">{entry.sessionContext.sprintName ? `${entry.sessionContext.sprintName} · ` : ''}{entry.sessionContext.goalTitle} · {entry.sessionContext.actionTitle}</p>}
+        {entry.sessionContext && <button type="button" onClick={() => openGoal(entry.sessionContext!.goalId)} className="mt-1 block max-w-full truncate text-left text-[11px] text-muted-foreground underline-offset-2 hover:text-foreground hover:underline" aria-label={`Open Outcome ${entry.sessionContext.goalTitle}`}>{entry.sessionContext.sessionStatus === 'interrupted' ? 'Interrupted · ' : entry.sessionContext.sessionStatus === 'stopped' ? 'Session ended · ' : 'Session · '}{entry.sessionContext.sprintName ? `${entry.sessionContext.sprintName} · ` : ''}{entry.sessionContext.goalTitle} · {entry.sessionContext.actionTitle}</button>}
       </div>
       <button
         type="button"

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { wouldExceedDay, workspaceTimeZone } from '@/lib/time-validation'
-import { dateKeyInTimeZone } from '@/lib/dates'
+import { dateKeyInTimeZone, parseWorkspaceTimestamp } from '@/lib/dates'
 import { sessionFinishState, type SessionDisposition } from '@/lib/session-state'
 
 export async function POST(req: NextRequest) {
@@ -28,13 +28,13 @@ async function startSession(actionId: string) {
   return NextResponse.json({ session })
 }
 
-function normalizeOutcome(body: Record<string, unknown>): { status: 'completed' | 'interrupted'; disposition: SessionDisposition } {
+function normalizeOutcome(body: Record<string, unknown>): { status: 'completed' | 'stopped' | 'interrupted'; disposition: SessionDisposition } {
   const disposition = String(body.disposition ?? '') as SessionDisposition
   if (disposition === 'complete_step') return { status: 'completed', disposition }
-  if (disposition === 'stop_to_backlog' || disposition === 'interrupted_to_backlog') return { status: 'interrupted', disposition }
-  if (disposition === 'stop_keep_today' || disposition === 'interrupted_keep_today') return { status: 'interrupted', disposition }
+  if (disposition === 'stop_to_backlog' || disposition === 'stop_keep_today') return { status: 'stopped', disposition }
+  if (disposition === 'interrupted_to_backlog' || disposition === 'interrupted_keep_today') return { status: 'interrupted', disposition }
   const outcome = String(body.outcome ?? 'completed')
-  if (outcome === 'abandoned') return { status: 'interrupted', disposition: 'stop_to_backlog' }
+  if (outcome === 'abandoned') return { status: 'stopped', disposition: 'stop_to_backlog' }
   if (outcome === 'interrupted') return { status: 'interrupted', disposition: 'interrupted_keep_today' }
   return { status: 'completed', disposition: 'complete_step' }
 }
@@ -108,9 +108,9 @@ async function manualSession(body: Record<string, unknown>) {
     return NextResponse.json({ error: 'Step cannot receive logged time' }, { status: 400 })
   }
 
-  const startedAt = body.entryTimestamp ? new Date(String(body.entryTimestamp)) : new Date()
-  if (Number.isNaN(startedAt.getTime())) return NextResponse.json({ error: 'invalid entryTimestamp' }, { status: 400 })
   const timeZone = await workspaceTimeZone()
+  const startedAt = body.entryTimestamp ? parseWorkspaceTimestamp(body.entryTimestamp, timeZone) : new Date()
+  if (!startedAt) return NextResponse.json({ error: 'invalid entryTimestamp' }, { status: 400 })
   const sessionDate = dateKeyInTimeZone(startedAt, timeZone)
   if (await wouldExceedDay(sessionDate, actualMinutes, timeZone)) {
     return NextResponse.json({ error: 'This log would put the day above 24 hours' }, { status: 409 })
