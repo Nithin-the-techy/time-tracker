@@ -140,6 +140,10 @@
     gap: 2rem;
     min-width: 0;
   }
+  .work-rail > * {
+    min-width: 0;
+    max-width: 100%;
+  }
   .work-tier1 {
     position: relative;
     border-color: var(--ink-border-strong);
