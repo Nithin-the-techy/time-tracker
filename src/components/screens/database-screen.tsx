@@ -95,7 +95,6 @@ export function DatabaseScreen() {
       <div>
         <p className="text-sm text-[var(--growth)]">Recorded time</p>
         <h1 className="ledger-page-title mt-1">History</h1>
-        <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">Filter, inspect, compare.</p>
       </div>
 
       <section>
@@ -149,7 +148,6 @@ export function DatabaseScreen() {
       <section>
         <div className="flex items-baseline justify-between mb-3">
           <p className="text-sm text-muted-foreground">By department</p>
-          <span className="text-xs text-muted-foreground">open for details</span>
         </div>
         {deptsWithStats.length > 0 && <div className="border-t border-border">{deptsWithStats.map((d) => <DepartmentRow key={d.id} slug={d.slug} name={d.name} minutes={d.minutes} share={d.share} daysActive={d.daysActive} subCount={d.subdepartments.length} lastActive={d.lastActive} onClick={() => openDeptPage(d.slug)} />)}</div>}
       </section>
