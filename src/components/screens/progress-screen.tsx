@@ -361,7 +361,7 @@ function ModeSwitch({ value, onChange }: { value: ProgressMode; onChange: (m: Pr
     { id: 'year', label: 'Year' },
   ]
   return (
-    <div aria-label="Chart window" className="inline-flex rounded-lg border border-border p-0.5 bg-muted/30">
+    <div className="inline-flex rounded-lg border border-border p-0.5 bg-muted/30">
       {modes.map((m) => (
         <button
           key={m.id}
