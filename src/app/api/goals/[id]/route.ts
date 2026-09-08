@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 
 const DATE_KEY = /^\d{4}-\d{2}-\d{2}$/
-const STATUSES = new Set(['draft', 'active', 'paused', 'completed', 'abandoned'])
+const STATUSES = new Set(['draft', 'active', 'paused', 'completed', 'abandoned', 'archived'])
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -33,7 +33,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  await db.goal.delete({ where: { id } })
+  await db.goal.update({ where: { id }, data: { status: 'archived' } })
   return NextResponse.json({ ok: true })
 }
 

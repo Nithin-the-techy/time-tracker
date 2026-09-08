@@ -3,7 +3,7 @@ import { db } from '@/lib/db'
 
 // GET /api/export — full app state as JSON for backup.
 export async function GET() {
-  const [departments, subdepartments, entries, weeklyReviews, weightChanges, rivals, rivalEstimates, unproductiveBlocks, dayAllowances, neutralEntries, goals, sprints, sprintGoals, goalTargets, goalProblems, goalActions, focusSessions] =
+  const [departments, subdepartments, entries, weeklyReviews, weightChanges, rivals, rivalEstimates, unproductiveBlocks, dayAllowances, neutralEntries, goals, sprints, sprintGoals, goalTargets, goalProblems, goalActions, sessions] =
     await Promise.all([
       db.department.findMany(),
       db.subdepartment.findMany(),
@@ -21,10 +21,10 @@ export async function GET() {
       db.goalTarget.findMany(),
       db.goalProblem.findMany(),
       db.goalAction.findMany(),
-      db.focusSession.findMany(),
+      db.workSession.findMany(),
     ])
   return NextResponse.json({
-    version: 6,
+    version: 7,
     departments,
     subdepartments,
     entries: entries.map((e) => ({ ...e, entryTimestamp: e.entryTimestamp.toISOString(), createdAt: e.createdAt.toISOString() })),
@@ -41,6 +41,6 @@ export async function GET() {
     goalTargets,
     goalProblems,
     goalActions,
-    focusSessions,
+    sessions,
   })
 }

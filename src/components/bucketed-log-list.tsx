@@ -135,19 +135,19 @@ function EntryRow({
             <span className="font-medium">{entry.department.name}</span>
           )}
           <span className="text-muted-foreground">·</span>
-          <span className="font-medium">{entry.subdepartment.name}</span>
+          {entry.subdepartment ? <span className="font-medium">{entry.subdepartment.name}</span> : <span className="text-muted-foreground">Area only</span>}
           <span className="text-muted-foreground">·</span>
           <span className="text-muted-foreground tabular-nums">{entry.durationMinutes}m</span>
           <span className="text-muted-foreground">·</span>
           <span className="text-muted-foreground tabular-nums">{time || '—'}</span>
         </div>
         {entry.note && <p className="text-xs text-muted-foreground mt-0.5">{entry.note}</p>}
-        {(entry as any).focusSession && <p className="text-[11px] text-muted-foreground mt-1">{(entry as any).focusSession.sprintName ? `${(entry as any).focusSession.sprintName} · ` : ''}{(entry as any).focusSession.goalTitle} · {(entry as any).focusSession.actionTitle}</p>}
+        {entry.sessionContext && <p className="text-[11px] text-muted-foreground mt-1">{entry.sessionContext.sprintName ? `${entry.sessionContext.sprintName} · ` : ''}{entry.sessionContext.goalTitle} · {entry.sessionContext.actionTitle}</p>}
       </div>
       <button
         type="button"
         onClick={() => store.deleteEntry(entry.id)}
-        className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-red-400 transition p-1 -m-1"
+        className="text-muted-foreground hover:text-red-400 transition p-1 -m-1 rounded focus-visible:outline-2 focus-visible:outline-offset-2"
         aria-label="Delete entry"
       >
         <Trash2 className="h-3.5 w-3.5" />

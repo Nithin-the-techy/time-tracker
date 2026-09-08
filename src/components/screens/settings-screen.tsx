@@ -10,7 +10,6 @@ import { useDepartments, useRivals, store } from '@/lib/hooks'
 import { DEPARTMENT_COLORS } from '@/lib/constants'
 import { NeutralBaselineManager } from '@/components/neutral-baseline-manager'
 import { toast } from 'sonner'
-import { DEPARTMENT_MODULES, type DepartmentModuleKey } from '@/lib/department-modules'
 import { useUIStore } from '@/store/ui-store'
 import {
   AlertDialog,
@@ -67,8 +66,6 @@ export function SettingsScreen() {
         <h1 className="ledger-page-title mt-1">Settings</h1>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">Rules, categories, comparisons, and backups.</p>
       </div>
-
-      <DepartmentModulesCard departments={departments} />
 
       {/* Sleep & neutral baseline */}
       <Card>
@@ -221,53 +218,6 @@ export function SettingsScreen() {
         </CardContent>
       </Card>
     </div>
-  )
-}
-
-function DepartmentModulesCard({ departments }: { departments: ReturnType<typeof useDepartments>['departments'] }) {
-  const [name, setName] = useState('')
-  const [moduleKey, setModuleKey] = useState<DepartmentModuleKey>('generic')
-  const [busy, setBusy] = useState(false)
-  const moduleOptions = Object.values(DEPARTMENT_MODULES)
-
-  async function add() {
-    if (!name.trim()) return
-    setBusy(true)
-    try {
-      await store.addDepartment(name.trim(), moduleKey)
-      setName('')
-      toast.success('Department created')
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Could not create department')
-    } finally { setBusy(false) }
-  }
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-sm">Department operating modules</CardTitle>
-        <CardDescription>Choose the language for each department.</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        {departments.map((department) => (
-          <div key={department.id} className="grid grid-cols-[1fr_150px] gap-2 items-center">
-            <span className="text-sm truncate">{department.name.replace('Department of ', '')}</span>
-            <select
-              value={department.moduleKey ?? 'generic'}
-              onChange={(e) => store.updateDepartment(department.id, { moduleKey: e.target.value as DepartmentModuleKey }).catch((error) => toast.error(error.message))}
-              className="h-9 rounded-md border border-input bg-background px-2 text-xs"
-            >
-              {moduleOptions.map((module) => <option key={module.key} value={module.key}>{module.label}</option>)}
-            </select>
-          </div>
-        ))}
-        <div className="grid sm:grid-cols-[1fr_150px_auto] gap-2 pt-3 border-t border-border">
-          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="New department" />
-          <select value={moduleKey} onChange={(e) => setModuleKey(e.target.value as DepartmentModuleKey)} className="h-10 rounded-md border border-input bg-background px-2 text-sm">{moduleOptions.map((module) => <option key={module.key} value={module.key}>{module.label}</option>)}</select>
-          <Button onClick={add} disabled={busy || !name.trim()}><Plus className="h-4 w-4" /></Button>
-        </div>
-      </CardContent>
-    </Card>
   )
 }
 

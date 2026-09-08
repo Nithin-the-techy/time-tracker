@@ -6,7 +6,7 @@ The replacement must preserve these constraints:
 
 - `Sprint` is universal and user-created; exams are only one possible use.
 - The normal application starts without personal goals, subjects, actions, or targets.
-- Goals, focus sessions, and the canonical log are one connected system: all goal work links to a log, while general logs may remain unlinked.
+- Outcomes, Sessions, and the canonical log are one connected system: all goal work links to a log, while general logs may remain unlinked.
 - Working UI copy is minimal.
 - Goal creation/management/execution and Progress/History views must not become competing sources of truth.
 
@@ -26,7 +26,7 @@ blocking and environmental enforcement remain external layers.
 
 ```text
 Outcome -> optional measures or blockers -> next steps
-        -> focus session -> optional result note -> measure progress -> review
+        -> Session -> optional result note -> measure progress -> review
                                          \-> interruption/recovery -> next step
 ```
 
@@ -125,7 +125,7 @@ An executable unit of work.
 The active-work list shows at most three planned steps. A backlog may be
 large; the commitment list may not.
 
-### Focus session
+### Session
 
 An intentional start/stop record linked to an action. A session can be running,
 completed, interrupted, or abandoned.
@@ -133,7 +133,7 @@ completed, interrupted, or abandoned.
 On start, the UI shows the step, elapsed time, and stop controls. A completed
 session can record a short result note, but there is no proof gate. Interrupted
 or abandoned sessions may record optional friction without invented evidence.
-Completed focus sessions create productive time entries so the existing
+Completed Sessions create productive time entries so the existing
 analytics remain useful.
 
 ### Check-in and recovery
@@ -158,8 +158,8 @@ Order and ownership both matter:
 
 Progress is the first tab and default landing view. It owns GPP, composition,
 and historical charts. Work is the second tab and owns setup and execution:
-Sprints, outcomes, the current focus, the running session, up to three planned
-steps, scope adjustment, and recovery. The two views share data but
+Sprints, Outcomes, the running Session, up to three planned
+Steps, scope adjustment, and recovery. The two views share data but
 must not duplicate controls or create competing sources of truth.
 
 The running session shows elapsed time and remaining planned time. Completing,
@@ -208,7 +208,7 @@ must remain visually dominant.
 
 ### Slice 1: complete goal-to-action loop
 
-- Add department modules, goals, targets, problems, actions, and focus sessions.
+- Add department modules, Outcomes, Measures, Blockers, Steps, and Sessions.
 - Add APIs, export/import support, cache hooks, and a planned-step execution view.
 - Add reusable goal editor; configure the exam sprint through normal UI/data.
 - Starting and completing an action must work end-to-end and create a canonical time entry.
@@ -237,7 +237,7 @@ must remain visually dominant.
 2. A user can create an Education goal and add arbitrary subject targets.
 3. A user can write a problem, attach a step, and see it in planned steps.
 4. A user can plan up to three primary steps for today.
-5. Start persists a running focus session across refreshes.
+5. Start persists a running Session across refreshes.
 6. Finish records duration, accepts an optional result note, and advances linked progress.
 7. A session-created time entry appears in the existing Database analytics.
 8. The exam goal is editable and uses no exam-only database table or route.

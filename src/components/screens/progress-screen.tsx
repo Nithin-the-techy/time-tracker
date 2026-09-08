@@ -172,11 +172,11 @@ export function ProgressScreen() {
         </div>
         <ModeSwitch value={mode} onChange={setProgressMode} />
       </div>
-      {/* Hero row — GPP left, trailing-30 right, both big, both window-independent */}
+      {/* Hero row — these summaries remain independent of the chart window. */}
       <div className="flex flex-wrap items-start justify-between gap-x-10 gap-y-6">
         <div>
           <p className="text-sm text-muted-foreground mb-1" title={GPP_TOOLTIP}>
-            GPP / month · symbolic
+            All-time pace · GPP / month · symbolic
           </p>
           <div className="flex items-baseline gap-3 flex-wrap">
             <h1 className="ledger-metric text-6xl text-[var(--growth)]">
@@ -354,20 +354,23 @@ function ModeSwitch({ value, onChange }: { value: ProgressMode; onChange: (m: Pr
     { id: 'year', label: 'Year' },
   ]
   return (
-    <div className="inline-flex rounded-lg border border-border p-0.5 bg-muted/30">
-      {modes.map((m) => (
-        <button
-          key={m.id}
-          type="button"
-          onClick={() => onChange(m.id)}
-          className={cn(
-            'px-3 py-1.5 text-xs rounded-md transition',
-            value === m.id ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground',
-          )}
-        >
-          {m.label}
-        </button>
-      ))}
+    <div className="space-y-1">
+      <span className="block text-[11px] text-muted-foreground">Chart window</span>
+      <div className="inline-flex rounded-lg border border-border p-0.5 bg-muted/30">
+        {modes.map((m) => (
+          <button
+            key={m.id}
+            type="button"
+            onClick={() => onChange(m.id)}
+            className={cn(
+              'px-3 py-1.5 text-xs rounded-md transition',
+              value === m.id ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground',
+            )}
+          >
+            {m.label}
+          </button>
+        ))}
+      </div>
     </div>
   )
 }

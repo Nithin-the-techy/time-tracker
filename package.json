@@ -6,7 +6,7 @@
     "dev": "next dev -p 3000 2>&1 | tee dev.log",
     "build": "sh scripts/vercel-build.sh && next build",
     "db:check:pg": "prisma validate --schema prisma/schema.postgres.prisma",
-    "db:deploy:pg": "prisma db push --schema prisma/schema.postgres.prisma --skip-generate",
+    "db:deploy:pg": "prisma migrate deploy --schema prisma/schema.postgres.prisma",
     "build:selfhost": "next build && cp -r .next/static .next/standalone/.next/ && cp -r public .next/standalone/",
     "start": "NODE_ENV=production bun .next/standalone/server.js 2>&1 | tee server.log",
     "lint": "eslint .",

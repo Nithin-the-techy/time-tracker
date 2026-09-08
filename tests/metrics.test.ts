@@ -1,6 +1,8 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { dateKeysInRange, dayMetrics, rangeMetrics, type EntryWithSub } from '../src/lib/metrics'
+import { goalProgressInfo } from '../src/lib/goal-metrics'
+import type { Goal } from '../src/lib/store'
 
 function entry(date: string, minutes: number, sleep = false): EntryWithSub {
   return {
@@ -58,5 +60,25 @@ test('ranges sum explicit negative and unknown independently', () => {
   assert.equal(metrics.productive, 120)
   assert.equal(metrics.unproductive, 60)
   assert.equal(metrics.unknown, 1260)
+})
+
+test('explicit Outcome Measures stay truthful when backlog Steps are added', () => {
+  const goal = {
+    targets: [{ targetValue: 10, currentValue: 5, weight: 1 }],
+    actions: [{ status: 'completed' }],
+  } as unknown as Goal
+  const before = goalProgressInfo(goal)
+  goal.actions.push({ status: 'backlog' } as never)
+  const after = goalProgressInfo(goal)
+  assert.equal(before.ratio, 0.5)
+  assert.equal(after.ratio, 0.5)
+})
+
+test('an Outcome without Measures uses a Step count or an honest empty state', () => {
+  const empty = goalProgressInfo({ targets: [], actions: [] } as unknown as Goal)
+  const withSteps = goalProgressInfo({ targets: [], actions: [{ status: 'completed' }, { status: 'today' }] } as unknown as Goal)
+  assert.equal(empty.label, 'No progress measure yet')
+  assert.equal(withSteps.label, '1 of 2 Steps done')
+  assert.equal(withSteps.ratio, null)
 })
 

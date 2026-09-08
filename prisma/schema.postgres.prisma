@@ -47,7 +47,7 @@ model Subdepartment {
 model Entry {
   id              String   @id @default(cuid())
   departmentId    String
-  subdepartmentId String
+  subdepartmentId String?
   entryTimestamp  DateTime
   durationMinutes Int
   note            String?
@@ -55,8 +55,8 @@ model Entry {
   createdAt       DateTime @default(now())
 
   department    Department    @relation(fields: [departmentId], references: [id])
-  subdepartment Subdepartment @relation(fields: [subdepartmentId], references: [id], onDelete: Cascade)
-  focusSession  FocusSession?
+  subdepartment Subdepartment? @relation(fields: [subdepartmentId], references: [id], onDelete: SetNull)
+  session       WorkSession?
 
   @@index([entryTimestamp])
   @@index([departmentId])
@@ -114,6 +114,7 @@ model SprintGoal {
   goal   Goal   @relation(fields: [goalId], references: [id], onDelete: Cascade)
 
   @@id([sprintId, goalId])
+  @@unique([goalId])
   @@index([goalId])
 }
 
@@ -176,13 +177,13 @@ model GoalAction {
   target        GoalTarget?    @relation(fields: [targetId], references: [id], onDelete: SetNull)
   problem       GoalProblem?   @relation(fields: [problemId], references: [id], onDelete: SetNull)
   subdepartment Subdepartment? @relation(fields: [subdepartmentId], references: [id], onDelete: SetNull)
-  sessions      FocusSession[]
+  sessions      WorkSession[]
 
   @@index([status, todayOrder])
   @@index([goalId])
 }
 
-model FocusSession {
+model WorkSession {
   id            String    @id @default(cuid())
   actionId      String
   entryId       String?   @unique
@@ -199,6 +200,7 @@ model FocusSession {
   entry  Entry?     @relation(fields: [entryId], references: [id], onDelete: SetNull)
 
   @@index([status, startedAt])
+  @@map("FocusSession")
 }
 
 model WeeklyReview {

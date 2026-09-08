@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { LineChart, History, Settings, Plus, BriefcaseBusiness } from 'lucide-react'
 import { useUIStore, type ScreenTab } from '@/store/ui-store'
 import { ProgressScreen } from '@/components/screens/progress-screen'
@@ -8,6 +9,8 @@ import { DepartmentPage } from '@/components/screens/department-page'
 import { SettingsScreen } from '@/components/screens/settings-screen'
 import { LogModal } from '@/components/log-modal'
 import { GoalsScreen } from '@/components/screens/goals-screen'
+import { findRunningSession } from '@/components/screens/today-screen'
+import { useGoals } from '@/lib/hooks'
 
 const TABS: { id: ScreenTab; label: string; icon: React.ElementType }[] = [
   { id: 'progress', label: 'Progress', icon: LineChart },
@@ -25,17 +28,18 @@ export function Dashboard() {
   return (
     <div className="min-h-screen bg-background">
       <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[60] focus:rounded-md focus:bg-primary focus:px-3 focus:py-2 focus:text-sm focus:text-primary-foreground">Skip to content</a>
-      <div className="max-w-6xl mx-auto flex flex-col md:flex-row min-h-screen">
+      <div className="mx-auto flex min-h-screen max-w-[1280px] flex-col md:flex-row">
         <div className="md:hidden border-b border-border px-4"><Header currentTab={currentTab} /></div>
-        <aside className="hidden md:flex w-56 shrink-0 border-r border-border px-4 py-5 flex-col sticky top-0 h-screen">
+        <aside className="hidden h-screen w-[208px] shrink-0 flex-col border-r border-border px-4 py-5 md:flex md:sticky md:top-0">
           <Header currentTab={currentTab} />
           <nav className="space-y-1 mt-10">
             {TABS.map((t) => <TabButton key={t.id} tab={t.id} label={t.label} icon={t.icon} active={tab === t.id} onClick={() => setTab(t.id)} />)}
           </nav>
+          <RunningIndicator onReturn={() => setTab('goals')} />
           <button type="button" aria-label="Log time" onClick={() => openLogModal(activeDeptSlug ?? undefined)} className="mt-auto w-full rounded-md border border-border px-3 py-2 text-left text-sm transition hover:border-foreground/30 focus-visible:outline-2 focus-visible:outline-ring"><Plus className="mr-2 inline h-4 w-4" /> Log time</button>
         </aside>
 
-      <main id="main-content" tabIndex={-1} className="flex-1 min-w-0 px-4 py-5 pb-24 outline-none md:px-8 md:pb-8">
+      <main id="main-content" tabIndex={-1} className="min-w-0 flex-1 px-4 py-5 pb-24 outline-none md:px-8 md:pb-8">
         {tab === 'goals' && <GoalsScreen />}
         {tab === 'progress' && <ProgressScreen />}
         {tab === 'database' && activeDeptSlug && <DepartmentPage slug={activeDeptSlug} />}
@@ -66,6 +70,22 @@ export function Dashboard() {
       </div>
     </div>
   )
+}
+
+function RunningIndicator({ onReturn }: { onReturn: () => void }) {
+  const { goals } = useGoals()
+  const running = findRunningSession(goals)
+  const [now, setNow] = useState(Date.now())
+  useEffect(() => {
+    if (!running) return
+    const timer = window.setInterval(() => setNow(Date.now()), 1000)
+    return () => window.clearInterval(timer)
+  }, [running])
+  if (!running) return null
+  const elapsed = Math.max(0, Math.floor((now - new Date(running.session.startedAt).getTime()) / 1000))
+  const minutes = Math.floor(elapsed / 60)
+  const seconds = elapsed % 60
+  return <button type="button" onClick={onReturn} className="mb-4 mt-auto rounded-md border border-[var(--growth)]/35 bg-[var(--growth)]/5 p-3 text-left hover:border-[var(--growth)]/60"><span className="flex items-center gap-2 text-xs font-medium text-[var(--growth)]"><span className="h-1.5 w-1.5 rounded-full bg-[var(--growth)]" /> Session running</span><span className="mt-2 block truncate text-xs text-foreground">{running.action.title}</span><span className="mt-1 block text-xs tabular-nums text-muted-foreground">{String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')} · Return to Session</span></button>
 }
 
 function Header({ currentTab }: { currentTab: string }) {

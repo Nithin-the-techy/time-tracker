@@ -1,0 +1,69 @@
+# Interface philosophy — why Work failed, and what stops it recurring
+
+This is not a task list. `docs/GOAL_ENGINE_SPEC.md` says what the product is. `AGENTS.md` says how to work on it. The redesign notes and the live QA pass already logged the specific bugs and the specific visual fixes. This document sits underneath all three. It exists to explain the reasoning that produces those bugs in the first place, so the next round of changes doesn't quietly reintroduce the same failure mode wearing a different variable name.
+
+Two different kinds of review have now looked at Work, and they found two different kinds of problem, for a reason worth naming up front. Reading the source finds *contradictions*: a screen that violates its own written rule, visible in one file, at rest. Running the app finds *incoherence*: two panels reading two different copies of the same fact and disagreeing about it, visible only at runtime, only after a specific sequence of actions, and invisible no matter how carefully you read either file in isolation. The Sprint card showing 0% while the Outcome detail — reading the real data a few milliseconds later — shows 100% is not a bug you can spot by staring at `sprint-panel.tsx`. It only exists in the gap between two files that both look correct on their own. That gap is the actual subject of this document, and principle 10 comes back to it directly.
+
+## 1. A fact should live in exactly one place
+
+Sprint cards keep a snapshot of each Goal instead of reading the live Goals collection, so finishing a Step updates one and not the other. The same relationship — which Outcomes belong to which Sprint — is also rendered four separate times on one screen, in four different visual formats. Neither of these is a rendering glitch. They're the same decision, made twice: it was cheaper in the moment to keep a local copy of a fact than to read the one real copy.
+
+That trade-off is reasonable in most software and is not available here, because of what this specific product is for. Operations exists so its one user can trust a single ledger of their own effort instead of trusting memory. A ledger that can disagree with itself isn't a smaller version of that promise — it's the opposite of it. The fix is not "sync the caches better." The fix is that a fact has one owner; everything else reads it live. If a screen genuinely needs the same relationship shown from two angles, render the same read twice — never maintain two independent copies of the same fact and hope they stay equal.
+
+## 2. Visual weight is a channel, and a channel that says everything says nothing
+
+Every region on Work — the queue, the Sprint button, the empty state, the outcome groups, the workbench, the accordion nested inside the workbench — uses the same card recipe: same border, same radius, same background. The live audit reached the same place from a different direction, independently asking for one soft surface per workspace instead of cards nested inside cards.
+
+This isn't about consistency for its own sake. Hierarchy is compression. Someone opening this screen for the fortieth time that week should know, in the time it takes to move their eyes once, which of the eight things on screen deserves attention right now — that's the entire economic case for spending effort on hierarchy at all. It lets a person skip reading in order to act. The moment every element carries identical weight, that shortcut disappears, and the screen has quietly added a task — figure out what matters here — that good design exists specifically to remove. A screen that makes you read everything to find anything has made the day longer, which is a strange thing for a productivity tool to do to its only user.
+
+## 3. When text and layout disagree, layout wins
+
+"Measures and blockers" is labeled optional in its own summary text, then wrapped in the exact same card border and background as Steps — the actual required content directly beneath it. Elsewhere the identical failure shows up as a code problem instead of a visual one: dozens of form controls with no label programmatically associated to them at all.
+
+These look unrelated — one's a copywriting choice, one's an accessibility bug — but they're the same mistake wearing two outfits. A label is a claim about what something is. Prose can make that claim ("this part is optional"), but prose is read serially and can be skipped; layout is parsed before conscious attention and can't be un-seen. When the two disagree, whatever the eye registers first wins, regardless of what the caption says underneath it. And a control with no name attached hasn't just failed a checklist — at the point someone wrote it, nobody decided what that control actually was, in words. That's the same failure of naming that produces illegible hierarchy everywhere else on the screen. If you can't say what a thing is, you can't decide how loud it should be.
+
+## 4. A displayed number is a promise, and broken arithmetic breaks trust everywhere, not just locally
+
+Without a Measure attached, an Outcome's percent is completed planned minutes over all Step minutes — so adding a new backlog Step to an Outcome you're already most of the way through can quietly lower the number, with no work having been undone. The scoring layer elsewhere carries a related tension it half-admits to in its own comments: explicitly symbolic, calibrated against a physical ceiling of human output, a fictional currency wearing the typography of a real one.
+
+A percentage makes a specific claim: this is how much of a fixed whole is done, and the number only moves when reality moves. Break that once — let it drop for a reason that isn't lost work — and the user doesn't file a bug report. They stop trusting the number, quietly, and the doubt doesn't stay contained to that one figure; it spreads to the others on the same screen, because now the only way to know which numbers are honest is to test each one yourself. For someone building this specifically to stop trusting memory or feeling over evidence, a percentage that can lie is worse than no percentage at all. Falling back to a plain count — three of five Steps complete — when there's no Measure to define the whole is correct for exactly this reason: it's a claim the system can actually keep.
+
+## 5. A partial rename is worse than no rename
+
+`AGENTS.md` commits, in writing, to one vocabulary — Sprint, Outcome, Step, Session. The running-timer screen still says Focus, and finishing it is called "finish focus block." This reads like a small copy inconsistency. It isn't. The moment a product contract names four concepts and a screen introduces a fifth word for one of them, there are now two possible readings, and no way to tell which is true without asking whoever remembers the history: either Focus and Session are the same thing and the copy never got updated, or Focus is a real sub-state the spec forgot to mention. Nobody reading the codebase cold can resolve that by inspection — and searching for "Session" won't even surface "Focus," so the drift is invisible to the tools that would normally catch it.
+
+A rename that isn't total isn't a rename. It's a fork of the vocabulary nobody decided to create. Once a term is retired, every surface still using the old one needs to be treated as a bug, not a style note — otherwise the vocabulary silently grows a second, undocumented dialect that only gets discovered by someone testing the live product end to end.
+
+## 6. Match the interface's emotional register to how often it's actually seen
+
+The running-session card's gold glow and its near-full-viewport takeover already drew a note asking for something calmer — no noisy celebration, no giant symbolic score. That instinct generalizes further than the one screen it was written about. Spectacle — glow, motion, full-bleed takeovers, celebratory language — has a real cost, and that cost is paid once per view. A landing page or an onboarding flow is seen rarely, so a moment of spectacle there is cheap across the product's whole life. A single-user execution tool opened a dozen times a day by the same tired, distractible person pays that cost a dozen times a day, forever — and it compounds specifically at the moment a glowing takeover is most likely to register as friction dressed up as delight rather than delight.
+
+The correct rule runs close to the inverse of what most consumer software optimizes for: the more often the same person will see a screen, the quieter it should be, because frequency multiplies whatever noise is built into the design, while novelty-driven software gets to spend its noise once and move on. Nothing here is being used by a stranger discovering the product for the first time. Everything here is being used by one person, repeatedly, to decide what to do next.
+
+## 7. Design the empty state first, not last
+
+This is a private tool for one person with a handful of active Outcomes at a time, realistically. No active Sprint, no Steps planned today, zero of three committed — these aren't edge cases for a disciplined, low-volume user. They're close to the default view, not a fallback bolted on after the fully-populated mockup shipped. The deeper version of this problem is structural, not just a missing state: the empty version of a region and the populated version of the same region currently use two different layouts — a centered icon in its own card versus a left-aligned list of dense rows. Every time data goes from zero to one, or back to zero, the screen doesn't just update a number. It restructures itself.
+
+A screen whose skeleton changes shape depending on how much data it holds hasn't designed an empty state. It's designed a populated state and left the empty one to whatever the conditional happened to render first. For a tool that will spend a large fraction of its life near-empty, that's backwards — the empty state deserves the first design pass, not the last.
+
+## 8. A setting that does nothing is worse than no setting
+
+The department operating modules — education, research, engineering, revenue — exist fully in Settings, with real UI, and are never read by Work. Every setting a person can change is an implicit promise: change this, and something downstream behaves differently. A setting that silently does nothing doesn't just waste the space it occupies on screen. It teaches the person that settings in this app might be theater — and that lesson doesn't stay contained to the one dead control. It attaches a small tax of doubt to every other setting nearby, because the only way left to know if a control is real is to test it yourself.
+
+Half-built configuration should come out of the UI the moment it stops being wired to real behavior, and go back in only once it's connected again. Decorative configuration is not a placeholder for later. It's a liability sitting in the product right now.
+
+## 9. Disclose the actual cost of an irreversible action, in the user's terms, at the moment they take it
+
+Deleting an Outcome preserves the underlying History entry but strips its Session, Outcome, and Sprint context — technically not lost, effectively unlinked from everything that made it legible afterward. Nothing in the interface says this before the action happens. "It's still in the database" is true and useless to someone deciding whether to click delete, because they experience the product through what's visible, not through what a backup could theoretically reconstruct later.
+
+The obligation isn't to make every action reversible — some things reasonably aren't. It's to say, in plain language, exactly what becomes invisible or disconnected before the person commits, so the decision is actually informed rather than assumed to be understood.
+
+## 10. Static review finds contradictions. Only running the loop finds incoherence.
+
+This last one is about how to use everything above. Reading a component file in isolation is enough to see that a screen violates its own stated hierarchy rule — that contradiction sits inside one file, at rest, and any careful read will find it. It is not enough to see that the Sprint list and the Outcome detail disagree about whether a Step is finished, because that bug only exists in the space between two files, expressed only at runtime, only after a specific sequence — create, start, finish, look at both screens before either one refetches. No amount of careful reading produces that discovery. Only doing the sequence does.
+
+`AGENTS.md` already asks for the authenticated page to be inspected before calling a change done, and that instruction evidently wasn't enough on its own to catch this class of bug — which suggests the gap isn't the instruction, it's specificity. Verification needs to mean walking the full Sprint → Outcome → Step → Session loop live and checking that every screen touching that data still agrees with every other one, every time Work changes — not confirming that the change typechecks and looks right in the one file that got edited. A diff can be correct and the product can still be lying to itself. The only way to know which one you have is to use it.
+
+---
+
+Where this leaves things: the spec says what to build, `AGENTS.md` says how to work here, the audits say what to fix. This document is the layer that says why those specific bugs are all instances of a small number of mistakes — one fact shown from two places, one visual weight used for everything, prose doing a layout's job, a number promising more than its arithmetic can honor, a rename that didn't finish, spectacle sized for the wrong audience, an empty state designed last, a setting that lied, a deletion that didn't say what it cost, and a review that stopped at the file instead of running the loop. Fix the specific bugs. Keep this list in mind while doing it, or the next screen drifts into the same shape under different names.

@@ -22,7 +22,7 @@
   --color-chart-3: var(--chart-3);
   --color-chart-2: var(--chart-2);
   --color-chart-1: var(--chart-1);
-  --color-ring: var(--growth);
+  --color-ring: var(--focus-ring);
   --color-input: var(--ink-border);
   --color-border: var(--ink-border);
   --color-destructive: var(--depreciation);
@@ -50,16 +50,19 @@
   --radius: 0.5rem;
   /* surfaces */
   --ink: oklch(0.14 0.02 250);             /* deep navy background */
-  --paper: oklch(0.19 0.015 60);            /* warm card surface, visibly distinct from ink */
+  --paper: oklch(0.18 0.012 250);           /* quiet navy surface */
+  --paper-raised: oklch(0.205 0.014 65);    /* restrained warm raised surface */
   --ink-border: oklch(1 0 0 / 8%);         /* hairline dividers */
+  --ink-border-strong: oklch(1 0 0 / 16%);
 
   /* accents */
-  --growth: oklch(0.75 0.13 85);           /* muted gold for positive NPP/GPP */
-  --depreciation: oklch(0.62 0.20 22);     /* red, slightly muted for dark mode */
+  --growth: oklch(0.76 0.12 85);           /* muted gold for truthful progress */
+  --depreciation: oklch(0.64 0.18 25);     /* red, reserved for risk and loss */
+  --focus-ring: oklch(0.76 0.10 230);      /* visible, calm keyboard focus */
 
   /* text */
-  --ink-foreground: oklch(0.94 0.01 60);   /* off-white */
-  --muted-foreground: oklch(0.62 0.01 60); /* secondary text */
+  --ink-foreground: oklch(0.92 0.01 60);   /* off-white */
+  --muted-foreground: oklch(0.68 0.01 60); /* readable secondary text */
 
   /* chart palette — used by recharts */
   --chart-1: oklch(0.75 0.13 85);           /* growth gold */
@@ -86,7 +89,7 @@
     -webkit-font-smoothing: antialiased;
   }
   :where(button, a, input, select, textarea):focus-visible {
-    outline: 2px solid var(--growth);
+    outline: 2px solid var(--focus-ring);
     outline-offset: 2px;
   }
   :where(button, a):not(:disabled) {
@@ -111,6 +114,91 @@
     font-feature-settings: "ss01", "ss02";
     font-variant-numeric: tabular-nums;
   }
+  .work-page-head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1.5rem;
+    margin-bottom: 1.75rem;
+  }
+  .work-eyebrow {
+    margin-bottom: .45rem;
+    color: var(--muted-foreground);
+    font-size: .72rem;
+    font-weight: 500;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+  }
+  .work-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 19rem;
+    gap: 2rem;
+    align-items: start;
+  }
+  .work-rail {
+    display: grid;
+    gap: 2rem;
+    min-width: 0;
+  }
+  .work-tier1 {
+    position: relative;
+    border-color: var(--ink-border-strong);
+  }
+  .work-tier1::before {
+    position: absolute;
+    inset: 0 0 auto;
+    height: 2px;
+    border-radius: .5rem .5rem 0 0;
+    background: var(--growth);
+    content: '';
+  }
+  .work-rail-strip, .work-empty-rail {
+    border: 1px solid var(--ink-border);
+    border-radius: .5rem;
+    background: transparent;
+    padding: .9rem;
+  }
+  .work-rail-strip:hover, .work-empty-rail:hover {
+    border-color: var(--ink-border-strong);
+    background: color-mix(in oklch, var(--paper) 42%, transparent);
+  }
+  .work-outcome-row {
+    display: flex;
+    align-items: flex-start;
+    gap: .65rem;
+    padding: .75rem .15rem;
+  }
+  .work-outcome-row:hover .work-outcome-marker { background: var(--growth); }
+  .work-outcome-marker { width: 3px; min-height: 2.35rem; flex-shrink: 0; border-radius: 2px; }
+  .work-empty-state {
+    min-height: 7rem;
+    border-top: 1px solid var(--ink-border);
+    border-bottom: 1px solid var(--ink-border);
+    padding: 1.25rem 0;
+  }
+  .work-row { min-height: 4.25rem; }
+  .work-add-step {
+    margin-top: 1rem;
+    border-top: 1px solid var(--ink-border);
+    padding-top: 1.25rem;
+  }
+  .work-secondary-section {
+    border-top: 1px solid var(--ink-border);
+    padding-top: 1rem;
+  }
+  @media (max-width: 1023px) {
+    .work-layout { grid-template-columns: 1fr; }
+    .work-rail { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+  }
+  @media (max-width: 640px) {
+    .work-page-head { align-items: flex-start; flex-direction: column; }
+    .work-rail { grid-template-columns: 1fr; }
+  }
+  input, select, textarea {
+    min-height: 40px;
+  }
+  textarea { min-height: 80px; }
+  ::selection { background: color-mix(in oklch, var(--growth) 28%, transparent); }
   ::-webkit-scrollbar {
     width: 8px;
     height: 8px;

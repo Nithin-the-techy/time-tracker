@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
 
   try {
     await db.$transaction(async (tx) => {
-      await tx.focusSession.deleteMany()
+      await tx.workSession.deleteMany()
       await tx.sprintGoal.deleteMany()
       await tx.goalAction.deleteMany()
       await tx.goalProblem.deleteMany()
@@ -55,8 +55,8 @@ export async function POST(req: NextRequest) {
       for (const e of body.entries ?? []) {
         await tx.entry.create({ data: { id: e.id, departmentId: e.departmentId, subdepartmentId: e.subdepartmentId, entryTimestamp: new Date(e.entryTimestamp), durationMinutes: e.durationMinutes, note: e.note ?? null, obsidianRef: e.obsidianRef ?? null, createdAt: new Date(e.createdAt ?? Date.now()) } })
       }
-      for (const s of body.focusSessions ?? []) {
-        await tx.focusSession.create({ data: { id: s.id, actionId: s.actionId, entryId: s.entryId ?? null, startedAt: new Date(s.startedAt), endedAt: s.endedAt ? new Date(s.endedAt) : null, status: s.status ?? 'completed', actualMinutes: s.actualMinutes ?? null, output: s.output ?? null, friction: s.friction ?? null, createdAt: new Date(s.createdAt ?? Date.now()) } })
+      for (const s of body.sessions ?? body.focusSessions ?? []) {
+        await tx.workSession.create({ data: { id: s.id, actionId: s.actionId, entryId: s.entryId ?? null, startedAt: new Date(s.startedAt), endedAt: s.endedAt ? new Date(s.endedAt) : null, status: s.status ?? 'completed', actualMinutes: s.actualMinutes ?? null, output: s.output ?? null, friction: s.friction ?? null, createdAt: new Date(s.createdAt ?? Date.now()) } })
       }
       for (const r of body.weeklyReviews ?? []) {
         await tx.weeklyReview.create({ data: { id: r.id, weekStartDate: new Date(`${r.weekStartDate}T00:00:00`), whatMattered: r.whatMattered ?? null, bottleneck: r.bottleneck ?? null, nextChange: r.nextChange ?? null } })
@@ -99,7 +99,7 @@ function validateBackup(body: any): string | null {
   const goalIds = new Set((body.goals ?? []).map((g: any) => g.id))
   const sprintIds = new Set((body.sprints ?? []).map((s: any) => s.id))
   if (body.subdepartments.some((s: any) => !departmentIds.has(s.departmentId))) return 'Invalid backup: orphaned subdepartment'
-  if (body.entries.some((e: any) => !departmentIds.has(e.departmentId) || !subdepartmentIds.has(e.subdepartmentId) || !Number.isFinite(Number(e.durationMinutes)))) {
+  if (body.entries.some((e: any) => !departmentIds.has(e.departmentId) || (e.subdepartmentId !== null && e.subdepartmentId !== undefined && !subdepartmentIds.has(e.subdepartmentId)) || !Number.isFinite(Number(e.durationMinutes)))) {
     return 'Invalid backup: malformed or orphaned time entry'
   }
   if (body.sprintGoals && (!Array.isArray(body.sprintGoals) || body.sprintGoals.some((link: any) => !sprintIds.has(link.sprintId) || !goalIds.has(link.goalId)))) return 'Invalid backup: orphaned Sprint link'

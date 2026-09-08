@@ -137,7 +137,7 @@ export function entryTimeKey(e: { entryTimestamp: string }): string {
 // Sleep = Health → Sleep department entries + neutral logs labeled 'sleep'.
 // Renaming that sub-department breaks the baseline.
 export function isSleepEntry(e: EntryWithSub): boolean {
-  return e.department.slug === 'health' && e.subdepartment.name === 'Sleep'
+  return e.department.slug === 'health' && e.subdepartment?.name === 'Sleep'
 }
 
 function loggedSleepMinutes(
@@ -411,13 +411,13 @@ export function subdepartmentShares(
   >()
   let totalDeptGpp = 0
   for (const e of filtered) {
-    const weight = e.subdepartment.valueWeight ?? 1.0
+    const weight = e.subdepartment?.valueWeight ?? 1.0
     totalDeptGpp += e.durationMinutes * weight
-    const k = e.subdepartmentId
+    const k = e.subdepartmentId ?? '__area_only__'
     if (!bySub.has(k)) {
       bySub.set(k, {
-        subdepartmentId: e.subdepartmentId,
-        subdepartmentName: e.subdepartment.name,
+        subdepartmentId: e.subdepartmentId ?? '__area_only__',
+        subdepartmentName: e.subdepartment?.name ?? 'Area only',
         minutes: 0,
         gppContribution: 0,
         entryCount: 0,

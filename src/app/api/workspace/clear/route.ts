@@ -5,7 +5,7 @@ import { db } from '@/lib/db'
 // sub-departments remain so a new day can start immediately.
 export async function POST() {
   await db.$transaction(async (tx) => {
-    await tx.focusSession.deleteMany()
+    await tx.workSession.deleteMany()
     await tx.sprintGoal.deleteMany()
     await tx.goalAction.deleteMany()
     await tx.goalProblem.deleteMany()

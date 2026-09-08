@@ -1,5 +1,13 @@
 import type { Goal, GoalTarget } from './store'
 
+export interface GoalProgressInfo {
+  ratio: number | null
+  completedSteps: number
+  totalSteps: number
+  label: string
+  hasMeasure: boolean
+}
+
 export function targetProgress(target: GoalTarget): number {
   if (target.targetValue <= 0) return 0
   return Math.min(1, Math.max(0, target.currentValue / target.targetValue))
@@ -18,6 +26,33 @@ export function goalProgress(goal: Goal): number {
   }
   const totalWeight = goal.targets.reduce((sum, target) => sum + Math.max(0.01, target.weight), 0)
   return goal.targets.reduce((sum, target) => sum + targetProgress(target) * Math.max(0.01, target.weight), 0) / totalWeight
+}
+
+/**
+ * A percentage is only shown when the user has defined a fixed measurable
+ * whole. Without one, a step count is more honest than a percentage that can
+ * change merely because backlog work was added.
+ */
+export function goalProgressInfo(goal: Goal): GoalProgressInfo {
+  const activeSteps = goal.actions.filter((action) => action.status !== 'cancelled')
+  const completedSteps = activeSteps.filter((action) => action.status === 'completed').length
+  if (goal.targets.length > 0) {
+    const ratio = goalProgress(goal)
+    return {
+      ratio,
+      completedSteps,
+      totalSteps: activeSteps.length,
+      label: `${Math.round(ratio * 100)}% complete`,
+      hasMeasure: true,
+    }
+  }
+  return {
+    ratio: null,
+    completedSteps,
+    totalSteps: activeSteps.length,
+    label: activeSteps.length > 0 ? `${completedSteps} of ${activeSteps.length} Steps done` : 'No progress measure yet',
+    hasMeasure: false,
+  }
 }
 
 export function daysRemaining(targetDate: string, today = new Date()): number {

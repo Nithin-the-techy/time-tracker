@@ -4,7 +4,7 @@ import { useEffect, useSyncExternalStore } from 'react'
 import { store, type AppState } from '@/lib/store'
 
 // Re-export the model types — components import them from here.
-export type { Entry, Department, Subdepartment, DayAllowance, NeutralEntry, UnproductiveBlock, Goal, GoalTarget, GoalProblem, GoalAction, FocusSession, Sprint, SprintGoal } from '@/lib/store'
+export type { Entry, Department, Subdepartment, DayAllowance, NeutralEntry, UnproductiveBlock, Goal, GoalTarget, GoalProblem, GoalAction, WorkSession, SessionDisposition, Sprint, SprintGoal } from '@/lib/store'
 
 export function useBootstrap() {
   useEffect(() => {

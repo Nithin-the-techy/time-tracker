@@ -1,11 +1,11 @@
-import type { HTMLAttributes } from 'react'
+import { cloneElement, isValidElement, useId, type HTMLAttributes, type ReactElement, type ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 
 export function LedgerPanel({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
     <div
       className={cn(
-        'rounded-md border border-border bg-card p-5 shadow-[0_10px_30px_rgba(0,0,0,0.10)]',
+        'rounded-lg border border-border/80 bg-card p-5',
         className,
       )}
       {...props}
@@ -17,7 +17,7 @@ export function LedgerRow({ className, ...props }: HTMLAttributes<HTMLDivElement
   return (
     <div
       className={cn(
-        'rounded-sm border border-border bg-background/25 p-3',
+        'rounded-md border border-border/70 bg-background/20 p-3',
         className,
       )}
       {...props}
@@ -37,8 +37,41 @@ export function LedgerSectionLabel({ className, ...props }: HTMLAttributes<HTMLH
 export function LedgerMeta({ className, ...props }: HTMLAttributes<HTMLParagraphElement>) {
   return (
     <p
-      className={cn('text-sm leading-5 text-muted-foreground', className)}
+      className={cn('text-xs leading-5 text-muted-foreground', className)}
       {...props}
     />
+  )
+}
+
+export function FormField({
+  label,
+  children,
+  hint,
+  required = false,
+  className,
+}: {
+  label: string
+  children: ReactNode
+  hint?: string
+  required?: boolean
+  className?: string
+}) {
+  const id = useId()
+  return (
+    <div className={cn('space-y-2', className)}>
+      <label htmlFor={id} className="block text-xs font-medium leading-5 text-foreground">
+        {label}{required && <span className="ml-1 text-[var(--growth)]" aria-hidden="true">*</span>}
+      </label>
+      {hint && <p id={`${id}-hint`} className="text-xs leading-4 text-muted-foreground">{hint}</p>}
+      {isValidElement(children)
+        ? (() => {
+            const element = children as ReactElement<{ id?: string; 'aria-describedby'?: string }>
+            return cloneElement(element, {
+              id,
+              'aria-describedby': hint ? `${id}-hint` : element.props['aria-describedby'],
+            })
+          })()
+        : children}
+    </div>
   )
 }

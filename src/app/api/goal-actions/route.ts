@@ -63,13 +63,26 @@ export async function PATCH(req: NextRequest) {
   const body = await req.json().catch(() => ({}))
   const id = String(body.id ?? '')
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
-  const existing = await db.goalAction.findUnique({ where: { id } })
+  const existing = await db.goalAction.findUnique({ where: { id }, include: { goal: true } })
   if (!existing) return NextResponse.json({ error: 'action not found' }, { status: 404 })
   const data: Record<string, string | number | null> = {}
   if (body.title !== undefined) data.title = String(body.title).trim().slice(0, 240)
   if (body.context !== undefined) data.context = String(body.context).trim().slice(0, 60)
   if (body.definitionOfDone !== undefined) data.definitionOfDone = body.definitionOfDone ? String(body.definitionOfDone).slice(0, 1000) : null
   if (body.output !== undefined) data.output = body.output ? String(body.output).slice(0, 2000) : null
+  if (body.dueDate !== undefined) {
+    const dueDate = body.dueDate ? String(body.dueDate) : null
+    if (dueDate && !DATE_KEY.test(dueDate)) return NextResponse.json({ error: 'invalid due date' }, { status: 400 })
+    data.dueDate = dueDate
+  }
+  if (body.subdepartmentId !== undefined) {
+    const subdepartmentId = body.subdepartmentId ? String(body.subdepartmentId) : null
+    if (subdepartmentId) {
+      const sub = await db.subdepartment.findFirst({ where: { id: subdepartmentId, departmentId: existing.goal.departmentId } })
+      if (!sub) return NextResponse.json({ error: 'subdepartment does not belong to goal department' }, { status: 400 })
+    }
+    data.subdepartmentId = subdepartmentId
+  }
   if (body.plannedMinutes !== undefined) {
     const minutes = Math.round(Number(body.plannedMinutes))
     if (minutes < 1 || minutes > 720) return NextResponse.json({ error: 'planned minutes must be 1–720' }, { status: 400 })

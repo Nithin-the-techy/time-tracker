@@ -22,13 +22,14 @@ export interface Department {
 export interface Entry {
   id: string
   departmentId: string
-  subdepartmentId: string
+  subdepartmentId: string | null
   entryTimestamp: string // ISO
   durationMinutes: number
   note: string | null
   obsidianRef: string | null
   createdAt: string
-  // The API always nests these two on every entry.
+  // The API always nests the Area and Department; sessionContext is present for
+  // entries created from a running Session.
   department: {
     id: string
     name: string
@@ -41,7 +42,12 @@ export interface Entry {
     id: string
     name: string
     valueWeight: number
-  }
+  } | null
+  sessionContext?: {
+    actionTitle: string
+    goalTitle: string
+    sprintName: string | null
+  } | null
 }
 
 export interface WeeklyReview {
@@ -105,8 +111,9 @@ export interface DayAllowance {
   neutralMinutes: number | null // null = default behavior
 }
 
-export type GoalStatus = 'draft' | 'active' | 'paused' | 'completed' | 'abandoned'
+export type GoalStatus = 'draft' | 'active' | 'paused' | 'completed' | 'abandoned' | 'archived'
 export type ActionStatus = 'backlog' | 'today' | 'in_progress' | 'completed' | 'cancelled'
+export type SessionDisposition = 'complete_step' | 'stop_keep_today' | 'stop_to_backlog' | 'interrupted_keep_today' | 'interrupted_to_backlog'
 
 export interface GoalTarget {
   id: string
@@ -134,7 +141,7 @@ export interface GoalProblem {
   updatedAt: string
 }
 
-export interface FocusSession {
+export interface WorkSession {
   id: string
   actionId: string
   entryId: string | null
@@ -165,7 +172,7 @@ export interface GoalAction {
   target: GoalTarget | null
   problem: GoalProblem | null
   subdepartment: Subdepartment | null
-  sessions: FocusSession[]
+  sessions: WorkSession[]
 }
 
 export interface Goal {
@@ -513,14 +520,18 @@ export const store = {
     notify()
   },
 
-  async createSprint(input: { name: string; phase?: string | null; startDate: string; endDate: string; status?: SprintStatus; goalIds?: string[] }) {
+  async refreshWork() {
+    await Promise.all([this.loadGoals(), this.loadSprints()])
+  },
+
+  async createSprint(input: { name: string; startDate: string; endDate: string; status?: SprintStatus; goalIds?: string[] }) {
     await postJson('/api/sprints', input)
-    await this.loadSprints()
+    await this.refreshWork()
   },
 
   async updateSprint(id: string, input: Partial<Pick<Sprint, 'name' | 'phase' | 'status' | 'startDate' | 'endDate' | 'notes'>> & { goalIds?: string[] }) {
     await patchJson(`/api/sprints/${id}`, input)
-    await this.loadSprints()
+    await this.refreshWork()
   },
 
   async moveGoalToSprint(goalId: string, sprintId: string) {
@@ -547,7 +558,7 @@ export const store = {
 
   async updateGoal(id: string, input: Partial<Pick<Goal, 'title' | 'outcome' | 'whyNow' | 'constraints' | 'priority' | 'status' | 'startDate' | 'targetDate'>>) {
     await patchJson(`/api/goals/${id}`, input)
-    await this.loadGoals()
+    await this.refreshWork()
   },
 
   async addGoalTarget(input: {
@@ -561,22 +572,22 @@ export const store = {
     weight?: number
   }) {
     await postJson('/api/goal-targets', input)
-    await this.loadGoals()
+    await this.refreshWork()
   },
 
   async updateGoalTarget(id: string, input: Partial<Pick<GoalTarget, 'label' | 'unit' | 'targetValue' | 'currentValue' | 'weight' | 'progressSource'>>) {
     await patchJson('/api/goal-targets', { id, ...input })
-    await this.loadGoals()
+    await this.refreshWork()
   },
 
   async addGoalProblem(input: { goalId: string; targetId?: string | null; statement: string; evidence?: string | null; severity?: number }) {
     await postJson('/api/goal-problems', input)
-    await this.loadGoals()
+    await this.refreshWork()
   },
 
   async updateGoalProblem(id: string, input: Partial<Pick<GoalProblem, 'statement' | 'evidence' | 'severity' | 'status'>>) {
     await patchJson('/api/goal-problems', { id, ...input })
-    await this.loadGoals()
+    await this.refreshWork()
   },
 
   async addGoalAction(input: {
@@ -592,22 +603,22 @@ export const store = {
     definitionOfDone?: string | null
   }) {
     await postJson('/api/goal-actions', input)
-    await this.loadGoals()
+    await this.refreshWork()
   },
 
-  async updateGoalAction(id: string, input: Partial<Pick<GoalAction, 'title' | 'context' | 'plannedMinutes' | 'status' | 'definitionOfDone' | 'output'>>) {
+  async updateGoalAction(id: string, input: Partial<Pick<GoalAction, 'title' | 'context' | 'plannedMinutes' | 'status' | 'definitionOfDone' | 'output' | 'dueDate' | 'subdepartmentId'>>) {
     await patchJson('/api/goal-actions', { id, ...input })
-    await this.loadGoals()
+    await this.refreshWork()
   },
 
-  async startFocusSession(actionId: string) {
-    await postJson('/api/focus-sessions', { operation: 'start', actionId })
-    await this.loadGoals()
+  async startSession(actionId: string) {
+    await postJson('/api/sessions', { operation: 'start', actionId })
+    await this.refreshWork()
   },
 
-  async finishFocusSession(input: { sessionId: string; actualMinutes: number; output?: string | null; friction?: string | null; outcome: FocusSession['status'] }) {
-    await postJson('/api/focus-sessions', { operation: 'finish', ...input })
-    await Promise.all([this.loadGoals(), this.loadEntries(ALL_FROM, ALL_TO)])
+  async finishSession(input: { sessionId: string; actualMinutes: number; resultNote?: string | null; friction?: string | null; disposition: SessionDisposition }) {
+    await postJson('/api/sessions', { operation: 'finish', ...input })
+    await Promise.all([this.refreshWork(), this.loadEntries(ALL_FROM, ALL_TO)])
   },
 
   // --- Backup ---

@@ -3,7 +3,7 @@ import { db } from '@/lib/db'
 import { DEPARTMENT_MODULES, type DepartmentModuleKey } from '@/lib/department-modules'
 
 const DATE_KEY = /^\d{4}-\d{2}-\d{2}$/
-const VALID_STATUSES = new Set(['draft', 'active', 'paused', 'completed', 'abandoned'])
+const VALID_STATUSES = new Set(['draft', 'active', 'paused', 'completed', 'abandoned', 'archived'])
 
 const goalInclude = {
   department: { include: { subdepartments: { where: { isActive: true }, orderBy: { sortOrder: 'asc' as const } } } },
@@ -20,7 +20,25 @@ export async function GET() {
     include: goalInclude,
     orderBy: [{ status: 'asc' }, { priority: 'asc' }, { targetDate: 'asc' }],
   })
-  return NextResponse.json({ goals })
+  const targetIds = new Set(goals.flatMap((goal) => goal.targets.map((target) => target.id)))
+  const productiveMinutes = new Map<string, number>()
+  const linkedEntries = await db.entry.findMany({
+    select: { durationMinutes: true, session: { select: { action: { select: { targetId: true } } } } },
+  })
+  for (const entry of linkedEntries) {
+    const targetId = entry.session?.action.targetId
+    if (targetId && targetIds.has(targetId)) productiveMinutes.set(targetId, (productiveMinutes.get(targetId) ?? 0) + entry.durationMinutes)
+  }
+  const refreshedGoals = goals.map((goal) => ({
+    ...goal,
+    targets: goal.targets.map((target) => {
+      if (target.progressSource === 'productive_minutes') return { ...target, currentValue: productiveMinutes.get(target.id) ?? 0 }
+      if (target.progressSource === 'completed_actions') return { ...target, currentValue: goal.actions.filter((action) => action.targetId === target.id && action.status === 'completed').length }
+      if (target.progressSource === 'outputs') return { ...target, currentValue: goal.actions.filter((action) => action.targetId === target.id && action.status === 'completed' && Boolean(action.output?.trim())).length }
+      return target
+    }),
+  }))
+  return NextResponse.json({ goals: refreshedGoals })
 }
 
 export async function POST(req: NextRequest) {

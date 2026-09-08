@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
     include: {
       department: true,
       subdepartment: true,
-      focusSession: {
+      session: {
         include: {
           action: {
             include: {
@@ -52,15 +52,15 @@ export async function GET(req: NextRequest) {
         subType: e.department.subType,
         moduleKey: e.department.moduleKey,
       },
-      subdepartment: {
+      subdepartment: e.subdepartment ? {
         id: e.subdepartment.id,
         name: e.subdepartment.name,
         valueWeight: e.subdepartment.valueWeight,
-      },
-      focusSession: e.focusSession ? {
-        actionTitle: e.focusSession.action.title,
-        goalTitle: e.focusSession.action.goal.title,
-        sprintName: e.focusSession.action.goal.sprintLinks[0]?.sprint.name ?? null,
+      } : null,
+      sessionContext: e.session ? {
+        actionTitle: e.session.action.title,
+        goalTitle: e.session.action.goal.title,
+        sprintName: e.session.action.goal.sprintLinks[0]?.sprint.name ?? null,
       } : null,
     })),
   })
@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
   const dept = await db.department.findUnique({ where: { id: departmentId } })
   if (!dept) return NextResponse.json({ error: 'department not found' }, { status: 400 })
 
-  let subdepartmentId: string | undefined = body.subdepartmentId ? String(body.subdepartmentId) : undefined
+  let subdepartmentId: string | null = body.subdepartmentId ? String(body.subdepartmentId) : null
 
   if (!subdepartmentId && body.subdepartmentName) {
     const name = String(body.subdepartmentName).trim()
@@ -111,12 +111,10 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  if (!subdepartmentId) {
-    return NextResponse.json({ error: 'subdepartmentId or subdepartmentName required' }, { status: 400 })
+  if (subdepartmentId) {
+    const sub = await db.subdepartment.findFirst({ where: { id: subdepartmentId, departmentId } })
+    if (!sub) return NextResponse.json({ error: 'subdepartment does not belong to department' }, { status: 400 })
   }
-
-  const sub = await db.subdepartment.findFirst({ where: { id: subdepartmentId, departmentId } })
-  if (!sub) return NextResponse.json({ error: 'subdepartment does not belong to department' }, { status: 400 })
 
   const ts = new Date(body.entryTimestamp)
   if (isNaN(ts.getTime())) {
@@ -158,11 +156,11 @@ export async function POST(req: NextRequest) {
         subType: entry.department.subType,
         moduleKey: entry.department.moduleKey,
       },
-      subdepartment: {
+      subdepartment: entry.subdepartment ? {
         id: entry.subdepartment.id,
         name: entry.subdepartment.name,
         valueWeight: entry.subdepartment.valueWeight,
-      },
+      } : null,
     },
   })
 }

@@ -1,10 +1,9 @@
 #!/bin/sh
 # Build pre-step that makes deploys zero-config:
-#   - DATABASE_URL starts with postgres*  → use schema.postgres.prisma,
-#     generate the matching client. Schema deployment is a separate, explicit
+#   - DATABASE_URL starts with postgres*  → use schema.postgres.prisma and
+#     generate the matching client. Migrations are a separate, explicit
 #     operation after backup; a frontend build never mutates production data.
-#   - anything else (local dev) → plain sqlite generate, tables come from
-#     db:push as before. Local files are never touched by the postgres path.
+#   - anything else (local dev) → plain sqlite generate.
 set -e
 
 # Resolve the prisma CLI whether or not node_modules/.bin is on PATH
@@ -15,9 +14,6 @@ command -v prisma >/dev/null 2>&1 || PRISMA="./node_modules/.bin/prisma"
 case "$DATABASE_URL" in
   postgres*)
     echo "vercel-build: Postgres DATABASE_URL detected → schema.postgres.prisma"
-    # Keep the hosted schema additive and in sync before Prisma Client is generated.
-    # This is required for newly introduced relational features such as Sprints.
-    "$PRISMA" db push --schema prisma/schema.postgres.prisma --skip-generate
     "$PRISMA" generate --schema prisma/schema.postgres.prisma
     ;;
   *)

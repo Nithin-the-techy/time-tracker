@@ -17,7 +17,7 @@ When direct user feedback conflicts with an older audit or proposal, update the 
 - Progress is the first tab and default landing view.
 - Work is the second tab and owns planning plus execution.
 - The Work hierarchy is `Sprint → Outcome → Step → Session`. Use these nouns consistently in interface copy. Measures and blockers are optional supporting links inside an Outcome, not another planning layer.
-- The active Sprint scopes the primary planned-today queue. Show at most three planned/in-focus steps. Clearly separate work outside the Sprint.
+- The active Sprint scopes the primary planned-today queue. Show at most three planned Steps. Clearly separate work outside the Sprint.
 - An Outcome is created from its result title; supporting detail is optional and is not a second “Finished when” gate. A completed session may include a short result note, but it never requires proof text. Friction is optional and is only for a real interruption or obstacle.
 - Goal-directed sessions create or link to canonical time logs. General logs may exist without a goal. Do not create competing records for the same work.
 - Sprints are universal and user-created. Never hard-code Nithin's current subjects, deadlines, hours, or personal targets into normal defaults.
