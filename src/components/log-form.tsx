@@ -16,7 +16,8 @@ import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Plus, CalendarIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useDepartments, store } from '@/lib/hooks'
+import { useDepartments, useGoals, store } from '@/lib/hooks'
+import type { GoalAction } from '@/lib/store'
 import { toKey } from '@/lib/dates'
 import { NEUTRAL_ACTIVITIES, NEGATIVE_ACTIVITIES } from '@/lib/constants'
 import { toast } from 'sonner'
@@ -48,8 +49,10 @@ function nowHHMM(): string {
 
 export function LogForm({ presetDepartmentId, onSaved }: LogFormProps) {
   const { departments } = useDepartments()
+  const { goals } = useGoals()
 
   const [kind, setKind] = useState<LogKind>('productive')
+  const [actionId, setActionId] = useState('')
 
   const presetDept = presetDepartmentId
     ? departments.find((d) => d.id === presetDepartmentId) ?? null
@@ -57,6 +60,8 @@ export function LogForm({ presetDepartmentId, onSaved }: LogFormProps) {
   const [deptId, setDeptId] = useState<string | null>(presetDept?.id ?? null)
 
   const selectedDept = departments.find((d) => d.id === deptId) ?? null
+  const workSteps = goals.flatMap((goal) => goal.actions.filter((action) => !['completed', 'cancelled', 'archived'].includes(action.status)).map((action) => ({ action, goalTitle: goal.title, departmentId: goal.departmentId })))
+  const selectedStep = workSteps.find((item) => item.action.id === actionId) ?? null
   const subs = selectedDept?.subdepartments ?? []
 
   const [subId, setSubId] = useState<string | null>(subs[0]?.id ?? null)
@@ -107,7 +112,7 @@ export function LogForm({ presetDepartmentId, onSaved }: LogFormProps) {
   const needsTarget = kind === 'productive'
   const canSave =
     hasMins &&
-    (kind === 'productive' ? (!!subId || (showNewSub && newSubName.trim().length > 0)) && !!deptId : true)
+    (kind === 'productive' ? (!!actionId || ((!!subId || (showNewSub && newSubName.trim().length > 0)) && !!deptId)) : true)
 
   function switchKind(k: LogKind) {
     setKind(k)
@@ -115,6 +120,7 @@ export function LogForm({ presetDepartmentId, onSaved }: LogFormProps) {
     setCustomMinutes('')
     setShowCustomActivity(false)
     setCustomActivity('')
+    if (k !== 'productive') setActionId('')
   }
 
   async function save() {
@@ -125,6 +131,18 @@ export function LogForm({ presetDepartmentId, onSaved }: LogFormProps) {
 
       if (kind === 'productive') {
         if (!deptId) return
+
+        if (actionId) {
+          const ts = `${dateKey}T${time || '00:00'}:00`
+          await store.addManualSession({ actionId, actualMinutes: mins, entryTimestamp: ts, resultNote: note.trim() || null })
+          toast.success(`Logged ${mins}m to ${selectedStep?.action.title ?? 'Step'}`)
+          setCustomMinutes('')
+          setNote('')
+          setTime(nowHHMM())
+          setDate(new Date())
+          onSaved?.()
+          return
+        }
 
         let effectiveSubId = subId
         if (showNewSub && newSubName.trim() && !subId) {
@@ -234,8 +252,15 @@ export function LogForm({ presetDepartmentId, onSaved }: LogFormProps) {
 
       {kind === 'productive' && (
         <>
+          <div>
+            <Label className="text-[11px] mb-2 block text-muted-foreground">Step</Label>
+            <select value={actionId} onChange={(event) => { const next = workSteps.find((item) => item.action.id === event.target.value); setActionId(event.target.value); if (next) { setDeptId(next.departmentId); setSubId(next.action.subdepartmentId); setShowNewSub(false) } }} className="h-9 w-full rounded-md border border-input bg-card px-3 text-sm">
+              <option value="">General time</option>
+              {workSteps.map(({ action, goalTitle }) => <option key={action.id} value={action.id}>{goalTitle} · {action.title}</option>)}
+            </select>
+          </div>
           {/* Department chips (hidden when presetDepartmentId is given) */}
-          {!presetDepartmentId && (
+          {!presetDepartmentId && !actionId && (
             <div>
               <Label className="text-[11px] mb-2 block text-muted-foreground">Department</Label>
               <div className="grid grid-cols-3 sm:grid-cols-3 gap-2">
@@ -265,7 +290,7 @@ export function LogForm({ presetDepartmentId, onSaved }: LogFormProps) {
           )}
 
           {/* Sub-department chips (with "+ new" always available) */}
-          {selectedDept && (
+          {selectedDept && !actionId && (
             <div>
               <Label className="text-[11px] mb-2 block text-muted-foreground">Sub-department</Label>
               {subs.length === 0 ? (

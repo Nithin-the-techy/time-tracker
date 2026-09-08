@@ -24,19 +24,23 @@ export async function GET() {
   })
   const targetIds = new Set(goals.flatMap((goal) => goal.targets.map((target) => target.id)))
   const productiveMinutes = new Map<string, number>()
+  const goalMinutes = new Map<string, number>()
   const linkedEntries = await db.entry.findMany({
-    where: { deletedAt: null },
-    select: { durationMinutes: true, session: { select: { action: { select: { targetId: true } } } } },
+    where: { deletedAt: null, session: { isNot: null } },
+    select: { durationMinutes: true, session: { select: { action: { select: { goalId: true, targetId: true } } } } },
   })
   for (const entry of linkedEntries) {
-    const targetId = entry.session?.action.targetId
+    const action = entry.session?.action
+    if (action) goalMinutes.set(action.goalId, (goalMinutes.get(action.goalId) ?? 0) + entry.durationMinutes)
+    const targetId = action?.targetId
     if (targetId && targetIds.has(targetId)) productiveMinutes.set(targetId, (productiveMinutes.get(targetId) ?? 0) + entry.durationMinutes)
   }
   const refreshedGoals = goals.map((goal) => ({
     ...goal,
     targets: goal.targets.map((target) => {
+      const hasLinkedSteps = goal.actions.some((action) => action.targetId === target.id)
       const progressValue = target.progressSource === 'productive_minutes'
-        ? productiveMinutes.get(target.id) ?? 0
+        ? hasLinkedSteps ? productiveMinutes.get(target.id) ?? 0 : goalMinutes.get(goal.id) ?? 0
         : target.progressSource === 'completed_actions'
           ? goal.actions.filter((action) => action.targetId === target.id && action.status === 'completed').length
           : target.progressSource === 'outputs'

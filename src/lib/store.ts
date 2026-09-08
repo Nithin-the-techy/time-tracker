@@ -667,6 +667,12 @@ export const store = {
     return result
   },
 
+  async addManualSession(input: { actionId: string; actualMinutes: number; entryTimestamp: string; resultNote?: string | null }) {
+    const result = await postJson('/api/sessions', { operation: 'manual', ...input })
+    await Promise.all([this.refreshWork(), this.loadEntries(ALL_FROM, ALL_TO)])
+    return result
+  },
+
   // --- Backup ---
   async exportJSON(): Promise<string> {
     const data = await getJson('/api/export')

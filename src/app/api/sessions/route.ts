@@ -9,6 +9,7 @@ export async function POST(req: NextRequest) {
   const operation = String(body.operation ?? '')
   if (operation === 'start') return startSession(String(body.actionId ?? ''))
   if (operation === 'finish') return finishSession(body)
+  if (operation === 'manual') return manualSession(body)
   return NextResponse.json({ error: 'operation must be start or finish' }, { status: 400 })
 }
 
@@ -86,6 +87,57 @@ async function finishSession(body: Record<string, unknown>) {
       },
     })
     return { session: updated, entry, action: updatedAction }
+  })
+  return NextResponse.json(result)
+}
+
+/** Add already-completed time to a Step without pretending it was a live timer run. */
+async function manualSession(body: Record<string, unknown>) {
+  const actionId = String(body.actionId ?? '')
+  const actualMinutes = Math.round(Number(body.actualMinutes ?? 0))
+  const output = body.resultNote ? String(body.resultNote).trim().slice(0, 2000) : null
+  if (!actionId || actualMinutes < 1 || actualMinutes > 720) {
+    return NextResponse.json({ error: 'step and actual minutes (1–720) are required' }, { status: 400 })
+  }
+
+  const action = await db.goalAction.findFirst({
+    where: { id: actionId, deletedAt: null },
+    include: { goal: true },
+  })
+  if (!action || ['cancelled', 'archived'].includes(action.status)) {
+    return NextResponse.json({ error: 'Step cannot receive logged time' }, { status: 400 })
+  }
+
+  const startedAt = body.entryTimestamp ? new Date(String(body.entryTimestamp)) : new Date()
+  if (Number.isNaN(startedAt.getTime())) return NextResponse.json({ error: 'invalid entryTimestamp' }, { status: 400 })
+  const timeZone = await workspaceTimeZone()
+  const sessionDate = dateKeyInTimeZone(startedAt, timeZone)
+  if (await wouldExceedDay(sessionDate, actualMinutes, timeZone)) {
+    return NextResponse.json({ error: 'This log would put the day above 24 hours' }, { status: 409 })
+  }
+
+  const result = await db.$transaction(async (tx) => {
+    const entry = await tx.entry.create({
+      data: {
+        departmentId: action.goal.departmentId,
+        subdepartmentId: action.subdepartmentId,
+        entryTimestamp: startedAt,
+        durationMinutes: actualMinutes,
+        note: output,
+      },
+    })
+    const session = await tx.workSession.create({
+      data: {
+        actionId,
+        entryId: entry.id,
+        startedAt,
+        endedAt: startedAt,
+        status: 'completed',
+        actualMinutes,
+        output,
+      },
+    })
+    return { session, entry, action }
   })
   return NextResponse.json(result)
 }
