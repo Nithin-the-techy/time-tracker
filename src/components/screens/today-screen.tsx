@@ -13,6 +13,7 @@ import { useUIStore } from '@/store/ui-store'
 import { toast } from 'sonner'
 
 type StepItem = { goal: Goal; action: GoalAction }
+type RecoveryStep = { action: GoalAction; goalTitle: string }
 
 export function findRunningSession(goals: Goal[]) {
   return goals.flatMap((goal) => goal.actions.flatMap((action) => action.sessions.map((session) => ({ goal, action, session })))).find(({ session }) => session.status === 'running') ?? null
@@ -74,7 +75,7 @@ export function TodayScreen() {
   }
 
   if (loading) return <LedgerPanel className="work-tier1 min-h-64" aria-label="Loading Today"><p className="text-sm text-muted-foreground">Loading Today…</p></LedgerPanel>
-  if (running) return <RunningSession session={running.session} action={running.action} goalTitle={running.goal.title} />
+  if (running) return <RunningSession session={running.session} action={running.action} goalTitle={running.goal.title} availableSteps={committed.filter(({ action }) => action.id !== running.action.id).map(({ action, goal }) => ({ action, goalTitle: goal.title }))} />
   if (!goals.some((goal) => goal.status === 'active')) {
     return <LedgerPanel className="work-tier1 flex min-h-64 flex-col items-center justify-center text-center"><Target className="h-7 w-7 text-muted-foreground" aria-hidden="true" /><LedgerSectionLabel className="mt-3">No active Outcomes</LedgerSectionLabel><LedgerMeta className="mt-1">Create an Outcome to decide what to do next.</LedgerMeta></LedgerPanel>
   }
@@ -107,7 +108,7 @@ function StepRow({ item: { goal, action }, busy, outsideSprint = false, onStart,
   return <div className="work-row flex items-center gap-3 py-3 first:pt-0 last:pb-0"><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium leading-5">{action.title}</p><LedgerMeta className="mt-1 truncate">{goal.title} · {action.plannedMinutes}m{outsideSprint ? ' · Outside current Sprint' : ''}</LedgerMeta></div><Button size="sm" onClick={() => onStart(action)} disabled={busy === action.id}><Play className="h-3.5 w-3.5" /> Start</Button><DropdownMenu><DropdownMenuTrigger asChild><Button size="icon" variant="ghost" aria-label={`More options for ${action.title}`}><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuItem onSelect={() => onResize(action)}><RotateCcw /> Resize Step</DropdownMenuItem><DropdownMenuItem onSelect={() => onBacklog(action)}><Clock3 /> Move to backlog</DropdownMenuItem></DropdownMenuContent></DropdownMenu></div>
 }
 
-export function RunningSession({ session, action, goalTitle }: { session: WorkSession; action: GoalAction; goalTitle: string }) {
+export function RunningSession({ session, action, goalTitle, availableSteps = [] }: { session: WorkSession; action: GoalAction; goalTitle: string; availableSteps?: RecoveryStep[] }) {
   const [now, setNow] = useState(Date.now())
   const startedAt = new Date(session.startedAt).getTime()
   const elapsedSeconds = Math.max(0, Math.floor((now - startedAt) / 1000))
@@ -118,18 +119,44 @@ export function RunningSession({ session, action, goalTitle }: { session: WorkSe
   const [friction, setFriction] = useState('')
   const [finishMode, setFinishMode] = useState<'stop' | 'interrupt' | null>(null)
   const [finishing, setFinishing] = useState(false)
+  const [recoveryOpen, setRecoveryOpen] = useState(false)
+  const [recoveryBusy, setRecoveryBusy] = useState(false)
   useEffect(() => { const timer = window.setInterval(() => setNow(Date.now()), 1000); return () => window.clearInterval(timer) }, [])
 
-  async function finish(outcome: 'completed' | 'interrupted' | 'abandoned') {
+  async function finish(outcome: 'completed' | 'stopped' | 'interrupted' | 'abandoned') {
     setFinishing(true)
     try {
       const actualMinutes = minutesEdited ? Math.max(1, Number(minutes)) : elapsedMinutes
-      const disposition = outcome === 'completed' ? 'complete_step' : outcome === 'interrupted' ? 'interrupted_keep_today' : 'interrupted_to_backlog'
-      await store.finishSession({ sessionId: session.id, actualMinutes, resultNote: output, friction, disposition })
-      toast.success(outcome === 'completed' ? `Step completed · ${actualMinutes}m logged` : outcome === 'interrupted' ? 'Session stopped; Step kept in Today.' : 'Step moved to backlog.')
+      const disposition = outcome === 'completed' ? 'complete_step' : outcome === 'stopped' ? 'stop_keep_today' : outcome === 'interrupted' ? 'interrupted_keep_today' : 'stop_to_backlog'
+      await store.finishSession({ sessionId: session.id, actualMinutes, resultNote: output, friction, disposition }, outcome === 'interrupted' ? { refresh: false } : undefined)
+      if (outcome === 'interrupted') {
+        toast.success('Interruption recorded. Choose what makes the next start easier.')
+        setRecoveryOpen(true)
+      } else toast.success(outcome === 'completed' ? `Step completed · ${actualMinutes}m logged` : outcome === 'stopped' ? 'Session ended; Step kept in Today.' : 'Step moved to backlog.')
       setFinishMode(null)
     } catch (error) { toast.error(error instanceof Error ? error.message : 'Could not end Session') }
     finally { setFinishing(false) }
+  }
+
+  async function recover(choice: 'resume' | 'shorten' | 'switch' | 'keep' | 'backlog', minutes?: number, next?: RecoveryStep) {
+    setRecoveryBusy(true)
+    try {
+      if (choice === 'resume') await store.startSession(action.id)
+      if (choice === 'shorten' && minutes) {
+        await store.updateGoalAction(action.id, { plannedMinutes: minutes, status: 'today' })
+        await store.startSession(action.id)
+      }
+      if (choice === 'switch' && next) await store.startSession(next.action.id)
+      if (choice === 'backlog') await store.updateGoalAction(action.id, { status: 'backlog' })
+      if (choice === 'keep') await store.refreshWork()
+      setRecoveryOpen(false)
+      if (choice === 'resume') toast.success('Session resumed')
+      else if (choice === 'shorten') toast.success(`Step reduced to ${minutes}m and resumed`)
+      else if (choice === 'switch') toast.success(`Session started · ${next?.action.title ?? 'next Step'}`)
+      else if (choice === 'backlog') toast.success('Step moved to backlog')
+      else toast.success('Step kept in Today')
+    } catch (error) { toast.error(error instanceof Error ? error.message : 'Could not update the interrupted Step') }
+    finally { setRecoveryBusy(false) }
   }
 
   return <>
@@ -140,7 +167,8 @@ export function RunningSession({ session, action, goalTitle }: { session: WorkSe
       <div className="mt-5 grid gap-5 sm:grid-cols-[110px_1fr]"><FormField label="Actual minutes"><Input type="number" min={1} max={720} value={minutesEdited ? minutes : String(elapsedMinutes)} onChange={(event) => { setMinutesEdited(true); setMinutes(event.target.value) }} /></FormField><FormField label="Result note" hint="Optional: what changed, shipped, or became clear?"><Input value={output} onChange={(event) => setOutput(event.target.value)} placeholder="A short result" /></FormField></div>
       <div className="mt-5 flex flex-wrap gap-2"><Button onClick={() => void finish('completed')} disabled={finishing}><CheckCircle2 className="h-4 w-4" /> Complete Step</Button><Button variant="outline" onClick={() => setFinishMode('stop')} disabled={finishing}><Pause className="h-4 w-4" /> End Session</Button><Button variant="ghost" onClick={() => setFinishMode('interrupt')} disabled={finishing}>I was interrupted</Button></div>
     </LedgerPanel>
-    <Dialog open={finishMode !== null} onOpenChange={(open) => { if (!open && !finishing) setFinishMode(null) }}><DialogContent className="sm:max-w-md"><DialogHeader><DialogTitle>{finishMode === 'interrupt' ? 'Recover from interruption' : 'End Session'}</DialogTitle><DialogDescription>{finishMode === 'interrupt' ? 'Record what happened, then decide what makes the next start easy.' : 'The Step is not complete yet. Where should it go next?'}</DialogDescription></DialogHeader><FormField label="Friction or interruption" hint="Optional"><Textarea rows={3} value={friction} onChange={(event) => setFriction(event.target.value)} placeholder="What got in the way?" /></FormField><DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-end"><Button variant="ghost" onClick={() => setFinishMode(null)} disabled={finishing}>Keep working</Button><Button variant="outline" onClick={() => void finish('interrupted')} disabled={finishing}>Keep in Today</Button><Button onClick={() => void finish('abandoned')} disabled={finishing}>Move to backlog</Button></DialogFooter></DialogContent></Dialog>
+    <Dialog open={finishMode !== null} onOpenChange={(open) => { if (!open && !finishing) setFinishMode(null) }}><DialogContent className="sm:max-w-md"><DialogHeader><DialogTitle>{finishMode === 'interrupt' ? 'Record the interruption' : 'End Session'}</DialogTitle><DialogDescription>{finishMode === 'interrupt' ? 'Write down the friction if useful. You will choose the next small move after saving.' : 'The Step is not complete yet. Where should it go next?'}</DialogDescription></DialogHeader><FormField label="Friction or interruption" hint="Optional"><Textarea rows={3} value={friction} onChange={(event) => setFriction(event.target.value)} placeholder="What got in the way?" /></FormField><DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-end"><Button variant="ghost" onClick={() => setFinishMode(null)} disabled={finishing}>Keep working</Button>{finishMode === 'interrupt' ? <Button variant="outline" onClick={() => void finish('interrupted')} disabled={finishing}>Record and recover</Button> : <><Button variant="outline" onClick={() => void finish('stopped')} disabled={finishing}>Keep in Today</Button><Button onClick={() => void finish('abandoned')} disabled={finishing}>Move to backlog</Button></>}</DialogFooter></DialogContent></Dialog>
+    <Dialog open={recoveryOpen} onOpenChange={(open) => { if (!open && !recoveryBusy) void recover('keep') }}><DialogContent className="sm:max-w-lg"><DialogHeader><DialogTitle>What makes the next start easier?</DialogTitle><DialogDescription>{action.title} is still available. Choose one deliberate next move; nothing is silently discarded.</DialogDescription></DialogHeader><div className="space-y-4"><div className="grid gap-2 sm:grid-cols-2"><Button onClick={() => void recover('resume')} disabled={recoveryBusy}>Resume this Step</Button><Button variant="outline" onClick={() => void recover('keep')} disabled={recoveryBusy}>Keep it in Today</Button><Button variant="outline" onClick={() => void recover('shorten', 5)} disabled={recoveryBusy}>Reduce to 5m and resume</Button><Button variant="outline" onClick={() => void recover('shorten', 15)} disabled={recoveryBusy}>Reduce to 15m and resume</Button></div>{availableSteps.length > 0 && <div className="border-t border-border/70 pt-4"><p className="text-sm font-medium">Switch to another Today Step</p><div className="mt-2 space-y-1">{availableSteps.slice(0, 3).map((step) => <Button key={step.action.id} variant="ghost" className="h-auto w-full justify-between px-2 py-2 text-left" onClick={() => void recover('switch', undefined, step)} disabled={recoveryBusy}><span className="min-w-0"><span className="block truncate text-sm">{step.action.title}</span><span className="block truncate text-xs text-muted-foreground">{step.goalTitle} · {step.action.plannedMinutes}m</span></span><Play className="ml-3 h-4 w-4 shrink-0" /></Button>)}</div></div>}<div className="border-t border-border/70 pt-4"><Button variant="ghost" onClick={() => void recover('backlog')} disabled={recoveryBusy}>Move this Step to backlog</Button></div></div></DialogContent></Dialog>
   </>
 }
 

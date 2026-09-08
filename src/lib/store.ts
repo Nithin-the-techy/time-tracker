@@ -657,9 +657,14 @@ export const store = {
     await this.refreshWork()
   },
 
-  async finishSession(input: { sessionId: string; actualMinutes: number; resultNote?: string | null; friction?: string | null; disposition: SessionDisposition }) {
-    await postJson('/api/sessions', { operation: 'finish', ...input })
+  async finishSession(input: { sessionId: string; actualMinutes: number; resultNote?: string | null; friction?: string | null; disposition: SessionDisposition }, options?: { refresh?: boolean }) {
+    const result = await postJson('/api/sessions', { operation: 'finish', ...input })
+    if (options?.refresh === false) {
+      await this.loadEntries(ALL_FROM, ALL_TO)
+      return result
+    }
     await Promise.all([this.refreshWork(), this.loadEntries(ALL_FROM, ALL_TO)])
+    return result
   },
 
   // --- Backup ---

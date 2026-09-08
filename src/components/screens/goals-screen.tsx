@@ -36,7 +36,7 @@ export function GoalsScreen() {
   return <div className="work-screen mx-auto max-w-[1280px] overflow-x-hidden pb-12">
     <header className="work-page-head"><div><p className="work-eyebrow">Execution</p><h1 className="ledger-page-title">Work</h1><p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">Choose one concrete Step, start it, and leave a truthful record of what changed.</p></div><CreateOutcomeDialog departments={departments} activeSprintId={sprints.find((sprint) => sprint.status === 'active')?.id ?? null} /></header>
     <div className="work-layout">
-      <main className="min-w-0">{running ? <RunningSession session={running.session} action={running.action} goalTitle={running.goal.title} /> : activeGoal ? <GoalWorkbench goal={activeGoal} onBack={closeGoal} /> : <TodayScreen />}</main>
+      <main className="min-w-0">{running ? <RunningSession session={running.session} action={running.action} goalTitle={running.goal.title} availableSteps={goals.flatMap((goal) => goal.actions.filter((action) => action.status === 'today' && action.id !== running.action.id).map((action) => ({ action, goalTitle: goal.title })))} /> : activeGoal ? <GoalWorkbench goal={activeGoal} onBack={closeGoal} /> : <TodayScreen />}</main>
       <aside className="work-rail" aria-label="Work navigation"><SprintPanel /><OutcomeNavigator goals={visibleGoals} sprints={visibleSprints} loading={loading} onOpenGoal={openGoal} /></aside>
     </div>
   </div>
