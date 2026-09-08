@@ -104,7 +104,7 @@ export function SprintPanel() {
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[min(88dvh,680px)] overflow-y-auto sm:max-w-lg">
-          <DialogHeader><DialogTitle>{creating ? 'Add a Sprint' : `Edit ${editing?.name ?? 'Sprint'}`}</DialogTitle><DialogDescription>{creating ? 'Name and dates are enough.' : 'Keep the window clear; outcomes live in the Work rail.'}</DialogDescription></DialogHeader>
+          <DialogHeader><DialogTitle>{creating ? 'Add a Sprint' : `Edit ${editing?.name ?? 'Sprint'}`}</DialogTitle><DialogDescription>{creating ? 'Set the window for this Sprint.' : 'Update the name or dates for this Sprint.'}</DialogDescription></DialogHeader>
           <div className="space-y-5">
             <FormField label="Name" required><Input value={name} onChange={(event) => setName(event.target.value)} placeholder="September execution window" /></FormField>
             <div className="grid gap-5 sm:grid-cols-2">
