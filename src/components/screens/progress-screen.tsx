@@ -361,23 +361,20 @@ function ModeSwitch({ value, onChange }: { value: ProgressMode; onChange: (m: Pr
     { id: 'year', label: 'Year' },
   ]
   return (
-    <div className="space-y-1">
-      <span className="block text-[11px] text-muted-foreground">Chart window</span>
-      <div className="inline-flex rounded-lg border border-border p-0.5 bg-muted/30">
-        {modes.map((m) => (
-          <button
-            key={m.id}
-            type="button"
-            onClick={() => onChange(m.id)}
-            className={cn(
-              'px-3 py-1.5 text-xs rounded-md transition',
-              value === m.id ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground',
-            )}
-          >
-            {m.label}
-          </button>
-        ))}
-      </div>
+    <div aria-label="Chart window" className="inline-flex rounded-lg border border-border p-0.5 bg-muted/30">
+      {modes.map((m) => (
+        <button
+          key={m.id}
+          type="button"
+          onClick={() => onChange(m.id)}
+          className={cn(
+            'px-3 py-1.5 text-xs rounded-md transition',
+            value === m.id ? 'bg-background text-foreground' : 'text-muted-foreground hover:text-foreground',
+          )}
+        >
+          {m.label}
+        </button>
+      ))}
     </div>
   )
 }
