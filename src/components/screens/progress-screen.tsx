@@ -69,8 +69,6 @@ import { useUIStore, type ProgressMode } from '@/store/ui-store'
 
 const WINDOW_DAYS: Record<ProgressMode, number> = { dayweek: 7, month: 30, year: 365 }
 
-const GPP_TOOLTIP = 'A symbolic score derived from productive time. It is not literal money.'
-
 export function ProgressScreen() {
   const now = new Date()
   const nowMinutes = now.getHours() * 60 + now.getMinutes()
@@ -170,47 +168,40 @@ export function ProgressScreen() {
 
   return (
     <div className="mx-auto max-w-5xl space-y-7">
-      <div>
-        <div>
-          <h1 className="ledger-page-title">Progress</h1>
-          <p className="mt-2 text-sm text-muted-foreground">Recorded time at a glance.</p>
-        </div>
-      </div>
-      {/* Hero row — these summaries remain independent of the chart window. */}
-      <div className="flex flex-wrap items-start justify-between gap-x-10 gap-y-6">
-        <div>
-          <p className="text-sm text-muted-foreground mb-1" title={GPP_TOOLTIP}>
-            GPP pace
-          </p>
-          <div className="flex items-baseline gap-3 flex-wrap">
-            <h1 className="ledger-metric text-3xl text-muted-foreground">
+      <h1 className="ledger-page-title">Progress</h1>
+      {/* These summaries remain independent of the chart window. */}
+      <div className="grid gap-6 border-y border-border/70 py-5 md:grid-cols-2 md:gap-10">
+        <div className="min-w-0">
+          <p className="text-sm text-muted-foreground">GPP pace</p>
+          <div className="mt-1 flex items-baseline gap-3 flex-wrap">
+            <h2 className="ledger-metric text-5xl text-muted-foreground">
               {formatMoney(g.monthlyDollars)}
-            </h1>
+            </h2>
             <span className="text-sm text-muted-foreground">/ month</span>
           </div>
-          <p className="text-xs text-muted-foreground mt-1.5">
+          <p className="mt-2 text-xs text-muted-foreground">
             ≈ <span className="text-foreground tabular-nums">{Math.round(g.monthlyHours)}h</span> productive a
             month · {formatHours(g.avgPerDayMinutes)}/day across {g.daysTracked} tracked {g.daysTracked === 1 ? 'day' : 'days'}
           </p>
-          <p className="text-xs text-muted-foreground/70 mt-0.5">
+          <p className="mt-1 text-xs text-muted-foreground/70">
             {formatGoalPercent(g.goalPercent)} of the $1T/month target · on pace for {formatMoney(g.annualDollars)} a year
           </p>
         </div>
 
-        <div className="md:text-right">
-          <p className="text-sm text-muted-foreground mb-1">Productive · last {t30.days} {t30.days === 1 ? 'day' : 'days'}</p>
-          <div className="flex items-baseline gap-3 flex-wrap md:justify-end">
-            <h2 className="ledger-metric text-6xl text-foreground">
+        <div className="min-w-0 md:text-right">
+          <p className="text-sm text-muted-foreground">Productive time · last {t30.days} {t30.days === 1 ? 'day' : 'days'}</p>
+          <div className="mt-1 flex items-baseline gap-3 flex-wrap md:justify-end">
+            <p className="ledger-metric text-5xl text-foreground">
               {bigHours(t30.productiveMinutes)}
-            </h2>
+            </p>
           </div>
           {t30.productiveMinutes > 0 ? (
-            <p className="text-xs text-muted-foreground mt-1.5">
+            <p className="mt-2 text-xs text-muted-foreground">
               {t30.hoursPerDay.toFixed(1)}h a day · {prettyDate(new Date(t30.fromKey + 'T00:00:00'))} to{' '}
               {prettyDate(new Date(t30.toKey + 'T00:00:00'))}
             </p>
           ) : (
-            <p className="text-xs text-muted-foreground mt-1.5">No productive time in this window</p>
+            <p className="mt-2 text-xs text-muted-foreground">No productive time in this window</p>
           )}
         </div>
       </div>
