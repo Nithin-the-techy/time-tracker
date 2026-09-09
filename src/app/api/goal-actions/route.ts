@@ -13,12 +13,13 @@ export async function POST(req: NextRequest) {
   if (!goalId || !title || plannedMinutes < 1 || plannedMinutes > 720 || !STATUSES.has(status)) {
     return NextResponse.json({ error: 'goal, title, and planned minutes (1–720) are required' }, { status: 400 })
   }
-  const goal = await db.goal.findFirst({ where: { id: goalId, deletedAt: null } })
+  const goal = await db.goal.findFirst({ where: { id: goalId, deletedAt: null }, include: { departments: { select: { departmentId: true } } } })
   if (!goal) return NextResponse.json({ error: 'goal not found' }, { status: 400 })
 
   const subdepartmentId = body.subdepartmentId ? String(body.subdepartmentId) : null
   if (subdepartmentId) {
-    const sub = await db.subdepartment.findFirst({ where: { id: subdepartmentId, departmentId: goal.departmentId } })
+    const allowedDepartmentIds = [goal.departmentId, ...goal.departments.map((membership) => membership.departmentId)]
+    const sub = await db.subdepartment.findFirst({ where: { id: subdepartmentId, departmentId: { in: allowedDepartmentIds } } })
     if (!sub) return NextResponse.json({ error: 'subdepartment does not belong to goal department' }, { status: 400 })
   }
   const targetId = body.targetId ? String(body.targetId) : null
@@ -34,10 +35,6 @@ export async function POST(req: NextRequest) {
   const dueDate = body.dueDate ? String(body.dueDate) : null
   if (dueDate && !DATE_KEY.test(dueDate)) return NextResponse.json({ error: 'invalid due date' }, { status: 400 })
 
-  if (status === 'today') {
-    const committedCount = await db.goalAction.count({ where: { status: { in: ['today', 'in_progress'] } } })
-    if (committedCount >= 3) return NextResponse.json({ error: 'Today’s queue is full. Move a step to backlog first.' }, { status: 409 })
-  }
   const todayOrder = status === 'today'
     ? await db.goalAction.count({ where: { status: { in: ['today', 'in_progress'] } } })
     : null
@@ -63,7 +60,7 @@ export async function PATCH(req: NextRequest) {
   const body = await req.json().catch(() => ({}))
   const id = String(body.id ?? '')
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
-  const existing = await db.goalAction.findFirst({ where: { id, deletedAt: null }, include: { goal: true } })
+  const existing = await db.goalAction.findFirst({ where: { id, deletedAt: null }, include: { goal: { include: { departments: { select: { departmentId: true } } } } } })
   if (!existing) return NextResponse.json({ error: 'action not found' }, { status: 404 })
   const data: Record<string, string | number | null | Date> = {}
   if (body.title !== undefined) data.title = String(body.title).trim().slice(0, 240)
@@ -78,7 +75,8 @@ export async function PATCH(req: NextRequest) {
   if (body.subdepartmentId !== undefined) {
     const subdepartmentId = body.subdepartmentId ? String(body.subdepartmentId) : null
     if (subdepartmentId) {
-      const sub = await db.subdepartment.findFirst({ where: { id: subdepartmentId, departmentId: existing.goal.departmentId } })
+      const allowedDepartmentIds = [existing.goal.departmentId, ...existing.goal.departments.map((membership) => membership.departmentId)]
+      const sub = await db.subdepartment.findFirst({ where: { id: subdepartmentId, departmentId: { in: allowedDepartmentIds } } })
       if (!sub) return NextResponse.json({ error: 'subdepartment does not belong to goal department' }, { status: 400 })
     }
     data.subdepartmentId = subdepartmentId
@@ -92,8 +90,6 @@ export async function PATCH(req: NextRequest) {
     const status = String(body.status)
     if (!STATUSES.has(status)) return NextResponse.json({ error: 'invalid status' }, { status: 400 })
     if (status === 'today' && existing.status !== 'today' && existing.status !== 'in_progress') {
-      const committedCount = await db.goalAction.count({ where: { status: { in: ['today', 'in_progress'] } } })
-      if (committedCount >= 3) return NextResponse.json({ error: 'Today’s queue is full. Move a step to backlog first.' }, { status: 409 })
       data.todayOrder = await db.goalAction.count({ where: { status: { in: ['today', 'in_progress'] } } })
     }
     if (status === 'backlog' || status === 'completed' || status === 'cancelled') data.todayOrder = null

@@ -7,6 +7,7 @@ const VALID_STATUSES = new Set(['draft', 'active', 'paused', 'completed', 'aband
 
 const goalInclude = {
   department: { include: { subdepartments: { where: { isActive: true }, orderBy: { sortOrder: 'asc' as const } } } },
+  departments: { include: { department: { include: { subdepartments: { where: { isActive: true }, orderBy: { sortOrder: 'asc' as const } } } } }, orderBy: { sortOrder: 'asc' as const } },
   targets: { include: { subdepartment: true }, orderBy: { sortOrder: 'asc' as const } },
   problems: { where: { archivedAt: null }, orderBy: [{ status: 'asc' as const }, { severity: 'asc' as const }] },
   actions: {
@@ -37,6 +38,7 @@ export async function GET() {
   }
   const refreshedGoals = goals.map((goal) => ({
     ...goal,
+    departmentIds: goal.departments.map((membership) => membership.departmentId),
     targets: goal.targets.map((target) => {
       const hasLinkedSteps = goal.actions.some((action) => action.targetId === target.id)
       const progressValue = target.progressSource === 'productive_minutes'
@@ -53,8 +55,11 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const body = await req.json().catch(() => ({}))
-  const departmentId = String(body.departmentId ?? '')
+  const body = await req.json().catch(() => ({})) as Record<string, any>
+  const requestedDepartmentIds: string[] = Array.isArray(body.departmentIds)
+    ? body.departmentIds.map((id: unknown) => String(id)).filter(Boolean)
+    : [String(body.departmentId ?? '')].filter(Boolean)
+  const departmentIds: string[] = [...new Set(requestedDepartmentIds)]
   const title = String(body.title ?? '').trim().slice(0, 160)
   const outcome = String(body.outcome ?? '').trim().slice(0, 1000)
   const startDate = String(body.startDate ?? '')
@@ -63,24 +68,24 @@ export async function POST(req: NextRequest) {
   const status = String(body.status ?? 'active')
   const sprintId = body.sprintId ? String(body.sprintId) : null
 
-  if (!departmentId || !title || !outcome || !DATE_KEY.test(startDate) || !DATE_KEY.test(targetDate)) {
-    return NextResponse.json({ error: 'department, title, outcome, and valid dates are required' }, { status: 400 })
+  if (departmentIds.length < 1 || departmentIds.length > 2 || !title || !outcome || !DATE_KEY.test(startDate) || !DATE_KEY.test(targetDate)) {
+    return NextResponse.json({ error: 'one or two Areas, title, outcome, and valid dates are required' }, { status: 400 })
   }
   if (targetDate < startDate) return NextResponse.json({ error: 'target date must be on or after start date' }, { status: 400 })
   if (!VALID_STATUSES.has(status)) return NextResponse.json({ error: 'invalid goal status' }, { status: 400 })
 
-  const department = await db.department.findUnique({ where: { id: departmentId } })
-  if (!department) return NextResponse.json({ error: 'department not found' }, { status: 400 })
+  const departments = await db.department.findMany({ where: { id: { in: departmentIds } } })
+  if (departments.length !== departmentIds.length) return NextResponse.json({ error: 'one or more Areas not found' }, { status: 400 })
   if (sprintId) {
     const sprint = await db.sprint.findUnique({ where: { id: sprintId } })
     if (!sprint || sprint.status === 'archived') return NextResponse.json({ error: 'sprint not found' }, { status: 400 })
   }
-  const requestedModule = String(body.moduleKey ?? department.moduleKey) as DepartmentModuleKey
+  const requestedModule = String(body.moduleKey ?? departments[0].moduleKey) as DepartmentModuleKey
   const moduleKey = DEPARTMENT_MODULES[requestedModule] ? requestedModule : 'generic'
 
   const goal = await db.goal.create({
     data: {
-      departmentId,
+      departmentId: departmentIds[0],
       title,
       outcome,
       moduleKey,
@@ -92,6 +97,7 @@ export async function POST(req: NextRequest) {
       constraints: body.constraints ? String(body.constraints).slice(0, 1000) : null,
       reviewCadence: String(body.reviewCadence ?? 'weekly').slice(0, 40),
       sprintLinks: sprintId ? { create: { sprintId } } : undefined,
+      departments: { create: departmentIds.map((departmentId, sortOrder) => ({ departmentId, sortOrder })) },
     },
     include: goalInclude,
   })

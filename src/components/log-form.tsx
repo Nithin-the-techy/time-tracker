@@ -60,7 +60,7 @@ export function LogForm({ presetDepartmentId, onSaved }: LogFormProps) {
   const [deptId, setDeptId] = useState<string | null>(presetDept?.id ?? null)
 
   const selectedDept = departments.find((d) => d.id === deptId) ?? null
-  const workSteps = goals.flatMap((goal) => goal.actions.filter((action) => !['completed', 'cancelled', 'archived'].includes(action.status)).map((action) => ({ action, goalTitle: goal.title, departmentId: goal.departmentId })))
+  const workSteps = goals.flatMap((goal) => goal.actions.filter((action) => !['completed', 'cancelled', 'archived'].includes(action.status)).map((action) => ({ action, goalTitle: goal.title, departmentId: action.subdepartment?.departmentId ?? goal.departmentId })))
   const selectedStep = workSteps.find((item) => item.action.id === actionId) ?? null
   const subs = selectedDept?.subdepartments ?? []
 

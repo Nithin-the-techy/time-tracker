@@ -23,6 +23,7 @@ model Department {
   subdepartments Subdepartment[]
   entries        Entry[]
   goals          Goal[]
+  goalMemberships GoalDepartment[]
 }
 
 model Subdepartment {
@@ -83,6 +84,7 @@ model Goal {
   deletedAt     DateTime?
 
   department Department    @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  departments GoalDepartment[]
   targets    GoalTarget[]
   problems   GoalProblem[]
   actions    GoalAction[]
@@ -121,6 +123,21 @@ model SprintGoal {
   @@id([sprintId, goalId])
   @@unique([goalId])
   @@index([goalId])
+}
+
+// An Outcome may span one or two Areas. departmentId remains the primary
+// Area for legacy logs and compatibility; this join table is authoritative for
+// Outcome membership going forward.
+model GoalDepartment {
+  goalId       String
+  departmentId String
+  sortOrder    Int      @default(0)
+
+  goal       Goal       @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  department Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+
+  @@id([goalId, departmentId])
+  @@index([departmentId])
 }
 
 model GoalTarget {

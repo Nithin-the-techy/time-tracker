@@ -4,7 +4,7 @@ import { dateKeyFromUtc } from '@/lib/dates'
 
 // GET /api/export — full app state as JSON for backup.
 export async function GET() {
-  const [departments, subdepartments, entries, weeklyReviews, weightChanges, rivals, rivalEstimates, unproductiveBlocks, dayAllowances, neutralEntries, goals, sprints, sprintGoals, goalTargets, goalProblems, goalActions, sessions, preference] =
+  const [departments, subdepartments, entries, weeklyReviews, weightChanges, rivals, rivalEstimates, unproductiveBlocks, dayAllowances, neutralEntries, goals, goalDepartments, sprints, sprintGoals, goalTargets, goalProblems, goalActions, sessions, preference] =
     await Promise.all([
       db.department.findMany(),
       db.subdepartment.findMany(),
@@ -17,6 +17,7 @@ export async function GET() {
       db.dayAllowance.findMany(),
       db.neutralEntry.findMany(),
       db.goal.findMany(),
+      db.goalDepartment.findMany(),
       db.sprint.findMany(),
       db.sprintGoal.findMany(),
       db.goalTarget.findMany(),
@@ -26,7 +27,7 @@ export async function GET() {
       db.workspacePreference.findUnique({ where: { id: 1 } }),
     ])
   return NextResponse.json({
-    version: 8,
+    version: 9,
     departments,
     subdepartments,
     entries: entries.map((e) => ({ ...e, entryTimestamp: e.entryTimestamp.toISOString(), createdAt: e.createdAt.toISOString() })),
@@ -38,6 +39,7 @@ export async function GET() {
     dayAllowances: dayAllowances.map((a) => ({ date: a.date, sleepMinutes: a.sleepMinutes, neutralMinutes: a.neutralMinutes })),
     neutralEntries: neutralEntries.map((n) => ({ ...n, createdAt: n.createdAt.toISOString() })),
     goals,
+    goalDepartments,
     sprints,
     sprintGoals,
     goalTargets,

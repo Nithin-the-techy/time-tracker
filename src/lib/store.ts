@@ -187,6 +187,7 @@ export interface GoalAction {
 export interface Goal {
   id: string
   departmentId: string
+  departmentIds?: string[]
   title: string
   outcome: string
   whyNow: string | null
@@ -200,6 +201,7 @@ export interface Goal {
   createdAt: string
   updatedAt: string
   department: Department
+  departments?: Array<{ department: Department; sortOrder: number }>
   targets: GoalTarget[]
   problems: GoalProblem[]
   actions: GoalAction[]
@@ -569,6 +571,7 @@ export const store = {
 
   async createGoal(input: {
     departmentId: string
+    departmentIds?: string[]
     title: string
     outcome: string
     startDate: string
@@ -584,7 +587,7 @@ export const store = {
     return data.goal as Goal
   },
 
-  async updateGoal(id: string, input: Partial<Pick<Goal, 'title' | 'outcome' | 'whyNow' | 'constraints' | 'priority' | 'status' | 'startDate' | 'targetDate'>>) {
+  async updateGoal(id: string, input: Partial<Pick<Goal, 'title' | 'outcome' | 'whyNow' | 'constraints' | 'priority' | 'status' | 'startDate' | 'targetDate'>> & { departmentIds?: string[] }) {
     await patchJson(`/api/goals/${id}`, input)
     await this.refreshWork()
   },

@@ -15,11 +15,12 @@ export async function POST(req: NextRequest) {
   }
   if (!SOURCES.has(source)) return NextResponse.json({ error: 'invalid progress source' }, { status: 400 })
 
-  const goal = await db.goal.findUnique({ where: { id: goalId } })
+  const goal = await db.goal.findUnique({ where: { id: goalId }, include: { departments: { select: { departmentId: true } } } })
   if (!goal) return NextResponse.json({ error: 'goal not found' }, { status: 400 })
   const subdepartmentId = body.subdepartmentId ? String(body.subdepartmentId) : null
   if (subdepartmentId) {
-    const sub = await db.subdepartment.findFirst({ where: { id: subdepartmentId, departmentId: goal.departmentId } })
+    const allowedDepartmentIds = [goal.departmentId, ...goal.departments.map((membership) => membership.departmentId)]
+    const sub = await db.subdepartment.findFirst({ where: { id: subdepartmentId, departmentId: { in: allowedDepartmentIds } } })
     if (!sub) return NextResponse.json({ error: 'subdepartment does not belong to the goal department' }, { status: 400 })
   }
   const count = await db.goalTarget.count({ where: { goalId } })

@@ -6,8 +6,9 @@ const STATUSES = new Set(['draft', 'active', 'paused', 'completed', 'abandoned',
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const body = await req.json().catch(() => ({}))
+  const body = await req.json().catch(() => ({})) as Record<string, any>
   const data: Record<string, string | number | null | Date> = {}
+  const hasDepartmentUpdate = body.departmentIds !== undefined || body.departmentId !== undefined
 
   if (body.title !== undefined) data.title = String(body.title).trim().slice(0, 160)
   if (body.outcome !== undefined) data.outcome = String(body.outcome).trim().slice(0, 1000)
@@ -27,6 +28,17 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
   }
 
+  const requestedDepartmentIds: string[] = body.departmentIds !== undefined
+    ? Array.isArray(body.departmentIds) ? body.departmentIds.map((value: unknown) => String(value)).filter(Boolean) : []
+    : [String(body.departmentId ?? '')].filter(Boolean)
+  const departmentIds: string[] = [...new Set(requestedDepartmentIds)]
+  if (hasDepartmentUpdate) {
+    if (departmentIds.length < 1 || departmentIds.length > 2) return NextResponse.json({ error: 'choose one or two Areas' }, { status: 400 })
+    const departments = await db.department.findMany({ where: { id: { in: departmentIds } }, select: { id: true } })
+    if (departments.length !== departmentIds.length) return NextResponse.json({ error: 'one or more Areas not found' }, { status: 400 })
+    data.departmentId = departmentIds[0]
+  }
+
   const sprintId = body.sprintId === null ? null : body.sprintId !== undefined ? String(body.sprintId) : undefined
   if (sprintId) {
     const sprint = await db.sprint.findUnique({ where: { id: sprintId }, select: { id: true, status: true } })
@@ -34,13 +46,19 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   }
 
   if (body.status !== undefined && String(body.status) !== 'archived') data.archivedAt = null
-  const goal = sprintId === undefined
+  const goal = sprintId === undefined && !hasDepartmentUpdate
     ? await db.goal.update({ where: { id }, data })
     : await db.$transaction(async (tx) => {
-        await tx.sprintGoal.deleteMany({ where: { goalId: id } })
-        if (sprintId) {
-          const sortOrder = await tx.sprintGoal.count({ where: { sprintId } })
-          await tx.sprintGoal.create({ data: { sprintId, goalId: id, sortOrder } })
+        if (hasDepartmentUpdate) {
+          await tx.goalDepartment.deleteMany({ where: { goalId: id } })
+          await tx.goalDepartment.createMany({ data: departmentIds.map((departmentId, sortOrder) => ({ goalId: id, departmentId, sortOrder })) })
+        }
+        if (sprintId !== undefined) {
+          await tx.sprintGoal.deleteMany({ where: { goalId: id } })
+          if (sprintId) {
+            const sortOrder = await tx.sprintGoal.count({ where: { sprintId } })
+            await tx.sprintGoal.create({ data: { sprintId, goalId: id, sortOrder } })
+          }
         }
         return tx.goal.update({ where: { id }, data })
       })

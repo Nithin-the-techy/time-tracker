@@ -52,7 +52,7 @@ async function finishSession(body: Record<string, unknown>) {
 
   const session = await db.workSession.findUnique({
     where: { id: sessionId },
-    include: { action: { include: { goal: true, target: true } } },
+    include: { action: { include: { goal: true, target: true, subdepartment: true } } },
   })
   if (!session || session.status !== 'running') return NextResponse.json({ error: 'running Session not found' }, { status: 404 })
 
@@ -65,7 +65,7 @@ async function finishSession(body: Record<string, unknown>) {
   const result = await db.$transaction(async (tx) => {
     const entry = await tx.entry.create({
       data: {
-        departmentId: session.action.goal.departmentId,
+        departmentId: session.action.subdepartment?.departmentId ?? session.action.goal.departmentId,
         subdepartmentId: session.action.subdepartmentId,
         entryTimestamp: session.startedAt,
         durationMinutes: actualMinutes,
@@ -102,7 +102,7 @@ async function manualSession(body: Record<string, unknown>) {
 
   const action = await db.goalAction.findFirst({
     where: { id: actionId, deletedAt: null },
-    include: { goal: true },
+    include: { goal: true, subdepartment: true },
   })
   if (!action || ['cancelled', 'archived'].includes(action.status)) {
     return NextResponse.json({ error: 'Step cannot receive logged time' }, { status: 400 })
@@ -119,7 +119,7 @@ async function manualSession(body: Record<string, unknown>) {
   const result = await db.$transaction(async (tx) => {
     const entry = await tx.entry.create({
       data: {
-        departmentId: action.goal.departmentId,
+        departmentId: action.subdepartment?.departmentId ?? action.goal.departmentId,
         subdepartmentId: action.subdepartmentId,
         entryTimestamp: startedAt,
         durationMinutes: actualMinutes,
