@@ -63,6 +63,25 @@ export async function PATCH(req: NextRequest) {
   const existing = await db.goalAction.findFirst({ where: { id, deletedAt: null }, include: { goal: { include: { departments: { select: { departmentId: true } } } } } })
   if (!existing) return NextResponse.json({ error: 'action not found' }, { status: 404 })
   const data: Record<string, string | number | null | Date> = {}
+  let nextGoal: NonNullable<typeof existing.goal> = existing.goal
+  if (body.goalId !== undefined) {
+    const nextGoalId = String(body.goalId)
+    const foundGoal = await db.goal.findFirst({ where: { id: nextGoalId, deletedAt: null }, include: { departments: { select: { departmentId: true } } } })
+    if (!foundGoal) return NextResponse.json({ error: 'destination Outcome not found' }, { status: 400 })
+    nextGoal = foundGoal
+    data.goalId = nextGoal.id
+    if (nextGoal.id !== existing.goalId) {
+      // Target and blocker links belong to the old Outcome. Do not carry stale
+      // relationships across when a clean edit moves a Step.
+      data.targetId = null
+      data.problemId = null
+      if (existing.subdepartmentId) {
+        const existingSubdepartment = await db.subdepartment.findUnique({ where: { id: existing.subdepartmentId }, select: { departmentId: true } })
+        const allowedDepartmentIds = [nextGoal.departmentId, ...nextGoal.departments.map((membership) => membership.departmentId)]
+        if (!existingSubdepartment || !allowedDepartmentIds.includes(existingSubdepartment.departmentId)) data.subdepartmentId = null
+      }
+    }
+  }
   if (body.title !== undefined) data.title = String(body.title).trim().slice(0, 240)
   if (body.context !== undefined) data.context = String(body.context).trim().slice(0, 60)
   if (body.definitionOfDone !== undefined) data.definitionOfDone = body.definitionOfDone ? String(body.definitionOfDone).slice(0, 1000) : null
@@ -75,7 +94,7 @@ export async function PATCH(req: NextRequest) {
   if (body.subdepartmentId !== undefined) {
     const subdepartmentId = body.subdepartmentId ? String(body.subdepartmentId) : null
     if (subdepartmentId) {
-      const allowedDepartmentIds = [existing.goal.departmentId, ...existing.goal.departments.map((membership) => membership.departmentId)]
+      const allowedDepartmentIds = [nextGoal.departmentId, ...nextGoal.departments.map((membership) => membership.departmentId)]
       const sub = await db.subdepartment.findFirst({ where: { id: subdepartmentId, departmentId: { in: allowedDepartmentIds } } })
       if (!sub) return NextResponse.json({ error: 'subdepartment does not belong to goal department' }, { status: 400 })
     }

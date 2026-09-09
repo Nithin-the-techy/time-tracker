@@ -104,14 +104,13 @@ export function SprintPanel() {
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[min(88dvh,680px)] overflow-y-auto sm:max-w-lg">
-          <DialogHeader><DialogTitle>{creating ? 'Add a Sprint' : 'Edit Sprint'}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{creating ? 'Add a Sprint' : 'Edit a Sprint'}</DialogTitle></DialogHeader>
           <div className="space-y-5">
             <FormField label="Name" required><Input value={name} onChange={(event) => setName(event.target.value)} placeholder="September planning window" /></FormField>
             <div className="grid gap-5 sm:grid-cols-2">
               <FormField label="Starts" required><Input type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} /></FormField>
               <FormField label="Ends" required><Input type="date" min={startDate} value={endDate} onChange={(event) => setEndDate(event.target.value)} /></FormField>
             </div>
-            {editing && <div className="border-t border-border/70 pt-5"><p className="text-xs font-medium text-foreground">Lifecycle</p><p className="mt-1 text-xs text-muted-foreground">{sprintStatusLabel(editing.status)} · {editing.goals.length} linked Outcome{editing.goals.length === 1 ? '' : 's'}</p></div>}
           </div>
           <DialogFooter className="gap-2 sm:justify-between">
             {editing ? <div className="flex flex-wrap gap-1">

@@ -68,8 +68,8 @@ export async function POST(req: NextRequest) {
   const status = String(body.status ?? 'active')
   const sprintId = body.sprintId ? String(body.sprintId) : null
 
-  if (departmentIds.length < 1 || departmentIds.length > 2 || !title || !outcome || !DATE_KEY.test(startDate) || !DATE_KEY.test(targetDate)) {
-    return NextResponse.json({ error: 'one or two Areas, title, outcome, and valid dates are required' }, { status: 400 })
+  if (departmentIds.length < 1 || !title || !outcome || !DATE_KEY.test(startDate) || !DATE_KEY.test(targetDate)) {
+    return NextResponse.json({ error: 'at least one Area, title, outcome, and valid dates are required' }, { status: 400 })
   }
   if (targetDate < startDate) return NextResponse.json({ error: 'target date must be on or after start date' }, { status: 400 })
   if (!VALID_STATUSES.has(status)) return NextResponse.json({ error: 'invalid goal status' }, { status: 400 })

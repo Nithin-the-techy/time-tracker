@@ -657,7 +657,7 @@ export const store = {
     await this.refreshWork()
   },
 
-  async updateGoalAction(id: string, input: Partial<Pick<GoalAction, 'title' | 'context' | 'plannedMinutes' | 'status' | 'definitionOfDone' | 'output' | 'dueDate' | 'subdepartmentId'>>) {
+  async updateGoalAction(id: string, input: Partial<Pick<GoalAction, 'goalId' | 'title' | 'context' | 'plannedMinutes' | 'status' | 'definitionOfDone' | 'output' | 'dueDate' | 'subdepartmentId'>>) {
     await patchJson('/api/goal-actions', { id, ...input })
     await this.refreshWork()
   },

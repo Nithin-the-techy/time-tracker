@@ -33,7 +33,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     : [String(body.departmentId ?? '')].filter(Boolean)
   const departmentIds: string[] = [...new Set(requestedDepartmentIds)]
   if (hasDepartmentUpdate) {
-    if (departmentIds.length < 1 || departmentIds.length > 2) return NextResponse.json({ error: 'choose one or two Areas' }, { status: 400 })
+    if (departmentIds.length < 1) return NextResponse.json({ error: 'choose at least one Area' }, { status: 400 })
     const departments = await db.department.findMany({ where: { id: { in: departmentIds } }, select: { id: true } })
     if (departments.length !== departmentIds.length) return NextResponse.json({ error: 'one or more Areas not found' }, { status: 400 })
     data.departmentId = departmentIds[0]

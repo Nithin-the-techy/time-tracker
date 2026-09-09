@@ -125,7 +125,7 @@ model SprintGoal {
   @@index([goalId])
 }
 
-// An Outcome may span one or two Areas. departmentId remains the primary
+// An Outcome may span any number of Areas. departmentId remains the primary
 // Area for legacy logs and compatibility; this join table is authoritative for
 // Outcome membership going forward.
 model GoalDepartment {

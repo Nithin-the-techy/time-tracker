@@ -1,4 +1,4 @@
--- Allow an Outcome to belong to one or two Areas while keeping Goal.departmentId
+-- Allow an Outcome to belong to any number of Areas while keeping Goal.departmentId
 -- as the primary compatibility field for existing logs and exports.
 CREATE TABLE IF NOT EXISTS "GoalDepartment" (
     "goalId" TEXT NOT NULL,
