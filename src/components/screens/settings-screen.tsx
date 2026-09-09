@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -68,7 +68,6 @@ export function SettingsScreen() {
       <Card id="settings-time">
         <CardHeader>
           <CardTitle className="text-sm">Time and calendar</CardTitle>
-          <CardDescription>Dates, Today, History, and daily limits use this workspace timezone.</CardDescription>
         </CardHeader>
         <CardContent>
           <TimezoneSettings />
@@ -79,9 +78,6 @@ export function SettingsScreen() {
       <Card>
         <CardHeader>
           <CardTitle className="text-sm">Sleep &amp; neutral baseline</CardTitle>
-          <CardDescription>
-            Sleep, meals, and chores. Correct a day only when you know the time.
-          </CardDescription>
         </CardHeader>
         <CardContent>
           <NeutralBaselineManager />
@@ -92,9 +88,6 @@ export function SettingsScreen() {
       <Card>
         <CardHeader>
           <CardTitle className="text-sm">Sub-department weights</CardTitle>
-          <CardDescription>
-            Reference multipliers for rival estimates. Logged hours and GPP stay unchanged.
-          </CardDescription>
         </CardHeader>
         <CardContent>
           {departments.length === 0 ? (
@@ -132,9 +125,6 @@ export function SettingsScreen() {
       <Card>
         <CardHeader>
           <CardTitle className="text-sm">Sub-departments</CardTitle>
-          <CardDescription>
-            Add or archive categories under each department.
-          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {departments.map((d) => (
@@ -155,9 +145,6 @@ export function SettingsScreen() {
       <Card id="settings-rivals">
         <CardHeader>
           <CardTitle className="text-sm">Rivals</CardTitle>
-          <CardDescription>
-            Compare time by category. Standings use the same symbolic GPP scale.
-          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {rivals.length === 0 && (
@@ -174,9 +161,6 @@ export function SettingsScreen() {
       <Card id="settings-backup">
         <CardHeader>
           <CardTitle className="text-sm">Backup</CardTitle>
-          <CardDescription>
-            Export or import a JSON snapshot of your records.
-          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-2">
           <div className="flex gap-2 flex-wrap">
@@ -204,7 +188,6 @@ export function SettingsScreen() {
       <Card id="settings-archived">
         <CardHeader>
           <CardTitle className="text-sm">Archived and deleted</CardTitle>
-          <CardDescription>Restore hidden work, or permanently remove it after reviewing what it contains.</CardDescription>
         </CardHeader>
         <CardContent>
           <ArchivedManager />
@@ -214,7 +197,6 @@ export function SettingsScreen() {
       <Card className="border-destructive/30">
         <CardHeader>
           <CardTitle className="text-sm">Clear activity data</CardTitle>
-          <CardDescription>Removes logs, goals, Sprints, sessions, reviews, and rivals. Departments and categories remain.</CardDescription>
         </CardHeader>
         <CardContent>
           <Button variant="outline" className="text-destructive hover:text-destructive" onClick={clearActivityData}>
@@ -227,7 +209,6 @@ export function SettingsScreen() {
       <Card>
         <CardHeader>
           <CardTitle className="text-sm">Account</CardTitle>
-          <CardDescription>Sign out.</CardDescription>
         </CardHeader>
         <CardContent>
           <Button variant="outline" size="sm" onClick={() => store.logout()}>
