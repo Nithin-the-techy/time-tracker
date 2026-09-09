@@ -24,9 +24,6 @@ export function NeutralBaselineManager() {
 
   return (
     <div className="space-y-3">
-      <p className="text-xs text-muted-foreground">
-        Log neutral time through Log time. Pin a value only to correct a day.
-      </p>
 
       {sorted.length > 0 && (
         <div className="space-y-1">

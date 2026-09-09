@@ -102,7 +102,7 @@ export function SettingsScreen() {
                   </div>
                   <div className="space-y-1 pl-5">
                     {d.subdepartments.length === 0 && (
-                      <p className="text-xs text-muted-foreground">No sub-departments. Add one in the Sub-departments card below.</p>
+                      <p className="text-xs text-muted-foreground">No sub-departments.</p>
                     )}
                     {d.subdepartments.map((s) => (
                       <SubWeightRow
@@ -148,7 +148,7 @@ export function SettingsScreen() {
         </CardHeader>
         <CardContent className="space-y-4">
           {rivals.length === 0 && (
-            <p className="text-sm text-muted-foreground">No rivals yet. Add one below.</p>
+            <p className="text-sm text-muted-foreground">No rivals yet.</p>
           )}
           {rivals.map((r) => (
             <RivalEditor key={r.id} rival={r} departments={departments} />
