@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react'
 import { Check, ChevronRight, Pause, Play, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { FormField, LedgerSectionLabel } from '@/components/quiet-ledger'
 import { useSprints, store, type Sprint } from '@/lib/hooks'
@@ -77,7 +77,7 @@ export function SprintPanel() {
       {active ? (
         <button type="button" onClick={() => openEditor(active)} className="work-rail-strip group flex w-full items-center gap-3 text-left">
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-sm font-medium text-foreground">{active.name}</span>
+            <span className="block line-clamp-2 text-sm font-medium text-foreground" title={active.name}>{active.name}</span>
             <span className="mt-1 block text-xs text-muted-foreground">{deadlineLabel(daysRemaining(active.endDate))} · {active.goals.length} outcome{active.goals.length === 1 ? '' : 's'}</span>
             <span className="mt-3 block" aria-label={`Sprint calendar elapsed: ${sprintElapsed(active).elapsedDays} of ${sprintElapsed(active).totalDays} days`}>
               <span className="mb-1 block text-[11px] text-muted-foreground">Calendar elapsed · {sprintElapsed(active).elapsedDays} of {sprintElapsed(active).totalDays} days</span>
@@ -96,7 +96,7 @@ export function SprintPanel() {
         <summary className="cursor-pointer text-xs font-medium text-muted-foreground">Other Sprints <span className="ml-1 tabular-nums">{otherSprints.length}</span></summary>
         <div className="mt-2 divide-y divide-border/70">
           {otherSprints.map((sprint) => <div key={sprint.id} className="flex items-center gap-3 py-3">
-            <button type="button" onClick={() => openEditor(sprint)} className="min-w-0 flex-1 text-left"><span className="block truncate text-sm font-medium">{sprint.name}</span><span className="mt-1 block text-xs text-muted-foreground">{sprintStatusLabel(sprint.status)} · {sprint.goals.length} outcome{sprint.goals.length === 1 ? '' : 's'}</span></button>
+            <button type="button" onClick={() => openEditor(sprint)} className="min-w-0 flex-1 text-left"><span className="block line-clamp-2 text-sm font-medium" title={sprint.name}>{sprint.name}</span><span className="mt-1 block text-xs text-muted-foreground">{sprintStatusLabel(sprint.status)} · {sprint.goals.length} outcome{sprint.goals.length === 1 ? '' : 's'}</span></button>
             {(['planned', 'paused'].includes(sprint.status)) && <Button size="sm" variant="ghost" onClick={() => setStatus(sprint.id, 'active')}><Play className="h-3.5 w-3.5" /> Activate</Button>}
           </div>)}
         </div>
@@ -104,7 +104,7 @@ export function SprintPanel() {
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[min(88dvh,680px)] overflow-y-auto sm:max-w-lg">
-          <DialogHeader><DialogTitle>{creating ? 'Add a Sprint' : `Edit ${editing?.name ?? 'Sprint'}`}</DialogTitle><DialogDescription>{creating ? 'Set the window for this Sprint.' : 'Update the name or dates for this Sprint.'}</DialogDescription></DialogHeader>
+          <DialogHeader><DialogTitle>{creating ? 'Add a Sprint' : 'Edit Sprint'}</DialogTitle></DialogHeader>
           <div className="space-y-5">
             <FormField label="Name" required><Input value={name} onChange={(event) => setName(event.target.value)} placeholder="September planning window" /></FormField>
             <div className="grid gap-5 sm:grid-cols-2">

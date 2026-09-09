@@ -1,12 +1,14 @@
 'use client'
 
-import { Trash2 } from 'lucide-react'
+import { MoreHorizontal } from 'lucide-react'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { store, useGoals, useWorkspacePreference } from '@/lib/hooks'
 import { formatMinutes, entryTimeKey, type EntryWithSub } from '@/lib/metrics'
 import { bucketsForRange, type Granularity } from '@/lib/dates'
 import { DEPARTMENT_COLORS } from '@/lib/constants'
 import { dateKeyInTimeZone } from '@/lib/dates'
 import { useUIStore } from '@/store/ui-store'
+import { toast } from 'sonner'
 
 interface BucketedLogListProps {
   entries: EntryWithSub[]
@@ -134,6 +136,26 @@ function EntryRow({
   const sessionLabel = sessionRunning
     ? 'Session running · Return to Session'
     : `${entry.sessionContext?.sessionStatus === 'interrupted' ? 'Interrupted · ' : entry.sessionContext?.sessionStatus === 'stopped' ? 'Session ended · ' : 'Session · '}${entry.sessionContext?.sprintName ? `${entry.sessionContext.sprintName} · ` : ''}${entry.sessionContext?.goalTitle} · ${entry.sessionContext?.actionTitle}`
+
+  async function remove() {
+    if (!window.confirm('Delete this log? You can undo it immediately.')) return
+    try {
+      await store.deleteEntry(entry.id)
+      toast.success('Log deleted', { action: { label: 'Undo', onClick: () => void restore() } })
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not delete log')
+    }
+  }
+
+  async function restore() {
+    try {
+      await store.restoreEntry(entry.id)
+      toast.success('Log restored')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not restore log')
+    }
+  }
+
   return (
     <div
       className="flex items-start justify-between gap-2 text-sm border-l-2 pl-3 py-1 group"
@@ -145,7 +167,7 @@ function EntryRow({
             <span className="font-medium">{entry.department.name}</span>
           )}
           <span className="text-muted-foreground">·</span>
-          {entry.subdepartment ? <span className="font-medium">{entry.subdepartment.name}</span> : <span className="text-muted-foreground">Area only</span>}
+          {entry.subdepartment ? <span className="font-medium">{entry.subdepartment.name}</span> : <span className="text-muted-foreground">Area</span>}
           <span className="text-muted-foreground">·</span>
           <span className="text-muted-foreground tabular-nums">{entry.durationMinutes}m</span>
           <span className="text-muted-foreground">·</span>
@@ -154,14 +176,16 @@ function EntryRow({
         {entry.note && <p className="text-xs text-muted-foreground mt-0.5">{entry.note}</p>}
         {entry.sessionContext && <button type="button" onClick={() => { if (sessionRunning) setTab('goals'); else openGoal(entry.sessionContext!.goalId) }} className="mt-1 block max-w-full truncate text-left text-[11px] text-muted-foreground underline-offset-2 hover:text-foreground hover:underline" aria-label={sessionRunning ? 'Return to running Session' : `Open Outcome ${entry.sessionContext.goalTitle}`}>{sessionLabel}</button>}
       </div>
-      <button
-        type="button"
-        onClick={() => store.deleteEntry(entry.id)}
-        className="text-muted-foreground hover:text-red-400 transition p-1 -m-1 rounded focus-visible:outline-2 focus-visible:outline-offset-2"
-        aria-label="Delete entry"
-      >
-        <Trash2 className="h-3.5 w-3.5" />
-      </button>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button type="button" className="rounded p-1 text-muted-foreground transition hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2" aria-label="Log actions">
+            <MoreHorizontal className="h-3.5 w-3.5" />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem variant="destructive" onSelect={() => void remove()}>Delete log</DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   )
 }

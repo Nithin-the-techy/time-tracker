@@ -93,8 +93,7 @@ export function DatabaseScreen() {
   return (
     <div className="mx-auto max-w-5xl space-y-8">
       <div>
-        <p className="text-sm text-[var(--growth)]">Recorded time</p>
-        <h1 className="ledger-page-title mt-1">History</h1>
+        <h1 className="ledger-page-title">History</h1>
       </div>
 
       <section>

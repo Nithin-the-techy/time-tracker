@@ -62,9 +62,7 @@ export function SettingsScreen() {
   return (
     <div className="mx-auto max-w-4xl space-y-7 pb-20">
       <div>
-        <p className="text-sm text-[var(--growth)]">System</p>
-        <h1 className="ledger-page-title mt-1">Settings</h1>
-        <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">Rules, categories, comparisons, and backups.</p>
+        <h1 className="ledger-page-title">Settings</h1>
       </div>
 
       <Card id="settings-time">

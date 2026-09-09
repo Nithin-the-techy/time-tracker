@@ -23,14 +23,27 @@ export function Dashboard() {
   const tab = useUIStore((s) => s.tab)
   const setTab = useUIStore((s) => s.setTab)
   const activeDeptSlug = useUIStore((s) => s.activeDeptSlug)
+  const activeGoalId = useUIStore((s) => s.activeGoalId)
   const openLogModal = useUIStore((s) => s.openLogModal)
   const currentTab = TABS.find((item) => item.id === tab)?.label ?? 'Progress'
+  useEffect(() => {
+    const main = document.getElementById('main-content')
+    main?.scrollTo({ top: 0 })
+    const focusHeading = window.requestAnimationFrame(() => {
+      const heading = main?.querySelector('h1, h2')
+      if (heading instanceof HTMLElement) {
+        heading.tabIndex = -1
+        heading.focus({ preventScroll: true })
+      }
+    })
+    return () => window.cancelAnimationFrame(focusHeading)
+  }, [tab, activeGoalId])
   return (
     <div className="min-h-screen bg-background">
       <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[60] focus:rounded-md focus:bg-primary focus:px-3 focus:py-2 focus:text-sm focus:text-primary-foreground">Skip to content</a>
-      <div className="mx-auto flex min-h-screen max-w-[1280px] flex-col md:flex-row">
+      <div className="dashboard-shell mx-auto flex min-h-screen max-w-[1680px] flex-col md:flex-row">
         <div className="md:hidden border-b border-border px-4"><Header currentTab={currentTab} /></div>
-        <aside className="hidden h-screen w-[208px] shrink-0 flex-col border-r border-border px-4 py-5 md:flex md:sticky md:top-0">
+        <aside className="dashboard-sidebar hidden h-screen w-[208px] shrink-0 flex-col border-r border-border px-4 py-5 md:flex md:sticky md:top-0">
           <Header currentTab={currentTab} />
           <nav className="space-y-1 mt-10">
             {TABS.map((t) => <TabButton key={t.id} tab={t.id} label={t.label} icon={t.icon} active={tab === t.id} onClick={() => setTab(t.id)} />)}
@@ -39,7 +52,7 @@ export function Dashboard() {
           <button type="button" aria-label="Log time" onClick={() => openLogModal(activeDeptSlug ?? undefined)} className="mt-auto w-full rounded-md border border-border px-3 py-2 text-left text-sm transition hover:border-foreground/30 focus-visible:outline-2 focus-visible:outline-ring"><Plus className="mr-2 inline h-4 w-4" /> Log time</button>
         </aside>
 
-      <main id="main-content" tabIndex={-1} className="min-w-0 flex-1 px-4 py-5 pb-24 outline-none md:px-8 md:pb-8">
+      <main id="main-content" tabIndex={-1} className="dashboard-main min-w-0 flex-1 px-4 py-5 pb-24 outline-none md:px-8 md:pb-8">
         {tab === 'goals' && <GoalsScreen />}
         {tab === 'progress' && <ProgressScreen />}
         {tab === 'database' && activeDeptSlug && <DepartmentPage slug={activeDeptSlug} />}

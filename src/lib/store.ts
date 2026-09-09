@@ -421,6 +421,11 @@ export const store = {
     notify()
   },
 
+  async restoreEntry(id: string) {
+    await patchJson(`/api/entries/${id}`, {})
+    await this.loadEntries(ALL_FROM, ALL_TO)
+  },
+
   // --- Sub-departments ---
   async addSubdepartment(departmentId: string, name: string) {
     await postJson('/api/subdepartments', { departmentId, name })

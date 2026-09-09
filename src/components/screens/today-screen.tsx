@@ -37,9 +37,10 @@ export function TodayScreen() {
   const running = findRunningSession(goals)
   const inSprint = activeSprint ? committed.filter(({ goal }) => sprintGoalIds.has(goal.id)) : committed
   const outsideSprint = activeSprint ? committed.filter(({ goal }) => !sprintGoalIds.has(goal.id)) : []
-  const compact = inSprint.slice(0, 3)
-  const outsideVisible = outsideSprint.slice(0, Math.max(0, 3 - compact.length))
-  const hiddenCount = Math.max(0, committed.length - compact.length - outsideVisible.length)
+  const visibleCommitted = [...inSprint, ...outsideSprint].slice(0, 3)
+  const visibleInSprint = visibleCommitted.filter(({ goal }) => !activeSprint || sprintGoalIds.has(goal.id))
+  const visibleOutsideSprint = visibleCommitted.filter(({ goal }) => activeSprint && !sprintGoalIds.has(goal.id))
+  const hiddenCount = Math.max(0, committed.length - visibleCommitted.length)
 
   async function start(action: GoalAction) {
     setBusy(action.id)
@@ -84,10 +85,10 @@ export function TodayScreen() {
     finally { setBusy(null) }
   }
 
-  if (loading) return <LedgerPanel className="work-tier1 min-h-64" aria-label="Loading Today"><p className="text-sm text-muted-foreground">Loading Today…</p></LedgerPanel>
+  if (loading) return <LedgerPanel className="work-tier1 min-h-52" aria-label="Loading Today"><p className="text-sm text-muted-foreground">Loading Today…</p></LedgerPanel>
   if (running) return <RunningSession session={running.session} action={running.action} goalTitle={running.goal.title} availableSteps={committed.filter(({ action }) => action.id !== running.action.id).map(({ action, goal }) => ({ action, goalTitle: goal.title }))} />
   if (!goals.some((goal) => goal.status === 'active')) {
-    return <LedgerPanel className="work-tier1 flex min-h-64 flex-col items-center justify-center text-center"><Target className="h-7 w-7 text-muted-foreground" aria-hidden="true" /><LedgerSectionLabel className="mt-3">No active Outcomes</LedgerSectionLabel></LedgerPanel>
+    return <LedgerPanel className="work-tier1 flex min-h-52 flex-col items-center justify-center text-center"><Target className="h-7 w-7 text-muted-foreground" aria-hidden="true" /><LedgerSectionLabel className="mt-3">No active Outcomes</LedgerSectionLabel></LedgerPanel>
   }
 
   const openSteps = committed.length
@@ -98,13 +99,12 @@ export function TodayScreen() {
     <>
       <LedgerPanel className="work-tier1 p-5 md:p-6">
         <div className="flex items-start justify-between gap-4">
-          <div><LedgerSectionLabel>Today&apos;s queue</LedgerSectionLabel><LedgerMeta className="mt-1">{activeSprint ? activeSprint.name : 'Planned Steps'}</LedgerMeta><LedgerMeta className="mt-1">{inSprint.length} committed · {openSteps} open Steps</LedgerMeta></div>
+          <div><LedgerSectionLabel>Today&apos;s queue</LedgerSectionLabel><LedgerMeta className="mt-1">{openSteps} Step{openSteps === 1 ? '' : 's'} · {committedMinutes}m planned</LedgerMeta><LedgerMeta className="mt-1">{activeSprint ? `Current Sprint · ${activeSprint.name}` : 'Planned work'}</LedgerMeta></div>
           <div className="text-right"><p className="ledger-metric text-2xl">{committedMinutes}m</p><LedgerMeta>planned</LedgerMeta></div>
         </div>
         <div className="mt-5">
-          {compact.length === 0 ? <div className="work-empty-state flex flex-wrap items-center justify-between gap-3"><p className="text-sm font-medium">{outsideSprint.length > 0 ? 'Nothing from the current Sprint is planned.' : 'Nothing committed for Today.'}</p>{planGoalId && <Button variant="outline" onClick={() => openGoal(planGoalId)}>Plan a Step</Button>}</div> : <div className="divide-y divide-border/70">{compact.map((item) => <StepRow key={item.action.id} item={item} {...rowProps} />)}</div>}
+          {visibleCommitted.length === 0 ? <div className="work-empty-state flex flex-wrap items-center justify-between gap-3"><p className="text-sm font-medium">Nothing committed for Today.</p>{planGoalId && <Button variant="outline" onClick={() => openGoal(planGoalId)}>Plan a Step</Button>}</div> : <div className="divide-y divide-border/70">{visibleInSprint.map((item) => <StepRow key={item.action.id} item={item} {...rowProps} />)}{visibleOutsideSprint.length > 0 && <div className="border-t border-border/70 pt-3"><LedgerMeta className="mb-1 uppercase tracking-[0.08em]">Outside current Sprint</LedgerMeta>{visibleOutsideSprint.map((item) => <StepRow key={item.action.id} item={item} outsideSprint {...rowProps} />)}</div>}</div>}
         </div>
-        {outsideVisible.length > 0 && <details className="mt-5 border-t border-border/70 pt-4"><summary className="cursor-pointer text-xs font-medium text-muted-foreground">Outside current Sprint · {outsideVisible.length}</summary><div className="mt-3 divide-y divide-border/70">{outsideVisible.map((item) => <StepRow key={item.action.id} item={item} outsideSprint {...rowProps} />)}</div></details>}
         {hiddenCount > 0 && <LedgerMeta className="mt-4 border-t border-border/70 pt-4">{hiddenCount} more planned Step{hiddenCount === 1 ? '' : 's'}</LedgerMeta>}
       </LedgerPanel>
       <Dialog open={Boolean(resizeAction)} onOpenChange={(open) => { if (!open && !busy) setResizeAction(null) }}>
@@ -161,7 +161,7 @@ export function RunningSession({ session, action, goalTitle, availableSteps = []
       if (choice === 'backlog') await store.updateGoalAction(action.id, { status: 'backlog' })
       if (choice === 'keep') await store.refreshWork()
       setRecoveryOpen(false)
-      if (choice === 'resume') toast.success('Session resumed')
+      if (choice === 'resume') toast.success('Another Session started · Step kept in Today')
       else if (choice === 'shorten') toast.success(`Step reduced to ${minutes}m and resumed`)
       else if (choice === 'switch') toast.success(`Session started · ${next?.action.title ?? 'next Step'}`)
       else if (choice === 'backlog') toast.success('Step moved to backlog')
@@ -179,7 +179,7 @@ export function RunningSession({ session, action, goalTitle, availableSteps = []
       <div className="mt-5 flex flex-wrap gap-2"><Button onClick={() => void finish('completed')} disabled={finishing}><CheckCircle2 className="h-4 w-4" /> Complete Step</Button><Button variant="outline" onClick={() => setFinishMode('stop')} disabled={finishing}><Pause className="h-4 w-4" /> End Session</Button><Button variant="ghost" onClick={() => setFinishMode('interrupt')} disabled={finishing}>I was interrupted</Button></div>
     </LedgerPanel>
     <Dialog open={finishMode !== null} onOpenChange={(open) => { if (!open && !finishing) setFinishMode(null) }}><DialogContent className="sm:max-w-md"><DialogHeader><DialogTitle>{finishMode === 'interrupt' ? 'Record the interruption' : 'End Session'}</DialogTitle><DialogDescription>{finishMode === 'interrupt' ? 'Write down the friction if useful. You will choose the next small move after saving.' : 'The Step is not complete yet. Where should it go next?'}</DialogDescription></DialogHeader>{finishMode === 'interrupt' && <FormField label="Friction or interruption" hint="Optional"><Textarea rows={3} value={friction} onChange={(event) => setFriction(event.target.value)} placeholder="What got in the way?" /></FormField>}<DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-end"><Button variant="ghost" onClick={() => setFinishMode(null)} disabled={finishing}>Keep working</Button>{finishMode === 'interrupt' ? <Button variant="outline" onClick={() => void finish('interrupted')} disabled={finishing}>Record and recover</Button> : <><Button variant="outline" onClick={() => void finish('stopped')} disabled={finishing}>Keep in Today</Button><Button onClick={() => void finish('abandoned')} disabled={finishing}>Move to backlog</Button></>}</DialogFooter></DialogContent></Dialog>
-    <Dialog open={recoveryOpen} onOpenChange={(open) => { if (!open && !recoveryBusy) void recover('keep') }}><DialogContent className="sm:max-w-lg"><DialogHeader><DialogTitle>What makes the next start easier?</DialogTitle><DialogDescription>{action.title} is still available. Choose one deliberate next move; nothing is silently discarded.</DialogDescription></DialogHeader><div className="space-y-4"><div className="grid gap-2 sm:grid-cols-2"><Button onClick={() => void recover('resume')} disabled={recoveryBusy}>Resume this Step</Button><Button variant="outline" onClick={() => void recover('keep')} disabled={recoveryBusy}>Keep it in Today</Button><Button variant="outline" onClick={() => void recover('shorten', 5)} disabled={recoveryBusy}>Reduce to 5m and resume</Button><Button variant="outline" onClick={() => void recover('shorten', 10)} disabled={recoveryBusy}>Reduce to 10m and resume</Button><Button variant="outline" onClick={() => void recover('shorten', 15)} disabled={recoveryBusy}>Reduce to 15m and resume</Button></div>{availableSteps.length > 0 && <div className="border-t border-border/70 pt-4"><p className="text-sm font-medium">Switch to another Today Step</p><div className="mt-2 space-y-1">{availableSteps.slice(0, 3).map((step) => <Button key={step.action.id} variant="ghost" className="h-auto w-full justify-between px-2 py-2 text-left" onClick={() => void recover('switch', undefined, step)} disabled={recoveryBusy}><span className="min-w-0"><span className="block truncate text-sm">{step.action.title}</span><span className="block truncate text-xs text-muted-foreground">{step.goalTitle} · {step.action.plannedMinutes}m</span></span><Play className="ml-3 h-4 w-4 shrink-0" /></Button>)}</div></div>}<div className="border-t border-border/70 pt-4"><Button variant="ghost" onClick={() => void recover('backlog')} disabled={recoveryBusy}>Move this Step to backlog</Button></div></div></DialogContent></Dialog>
+    <Dialog open={recoveryOpen} onOpenChange={(open) => { if (!open && !recoveryBusy) void recover('keep') }}><DialogContent className="sm:max-w-lg"><DialogHeader><DialogTitle>Interruption recorded</DialogTitle></DialogHeader><div className="space-y-4"><div className="grid gap-2 sm:grid-cols-2"><Button onClick={() => void recover('resume')} disabled={recoveryBusy}>Start another Session</Button><Button variant="outline" onClick={() => void recover('keep')} disabled={recoveryBusy}>Keep it in Today</Button><Button variant="outline" onClick={() => void recover('shorten', 5)} disabled={recoveryBusy}>Reduce to 5m</Button><Button variant="outline" onClick={() => void recover('shorten', 10)} disabled={recoveryBusy}>Reduce to 10m</Button><Button variant="outline" onClick={() => void recover('shorten', 15)} disabled={recoveryBusy}>Reduce to 15m</Button></div>{availableSteps.length > 0 && <div className="border-t border-border/70 pt-4"><p className="text-sm font-medium">Switch to another Today Step</p><div className="mt-2 space-y-1">{availableSteps.slice(0, 3).map((step) => <Button key={step.action.id} variant="ghost" className="h-auto w-full justify-between px-2 py-2 text-left" onClick={() => void recover('switch', undefined, step)} disabled={recoveryBusy}><span className="min-w-0"><span className="block truncate text-sm">{step.action.title}</span><span className="block truncate text-xs text-muted-foreground">{step.goalTitle} · {step.action.plannedMinutes}m</span></span><Play className="ml-3 h-4 w-4 shrink-0" /></Button>)}</div></div>}<div className="border-t border-border/70 pt-4"><Button variant="ghost" onClick={() => void recover('backlog')} disabled={recoveryBusy}>Move this Step to backlog</Button></div></div></DialogContent></Dialog>
   </>
 }
 

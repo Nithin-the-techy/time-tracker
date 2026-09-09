@@ -10,3 +10,13 @@ export async function DELETE(_req: NextRequest, ctx: { params: Promise<{ id: str
     return NextResponse.json({ error: 'not found' }, { status: 404 })
   }
 }
+
+export async function PATCH(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  const { id } = await ctx.params
+  try {
+    await db.entry.update({ where: { id }, data: { deletedAt: null } })
+    return NextResponse.json({ ok: true })
+  } catch {
+    return NextResponse.json({ error: 'not found' }, { status: 404 })
+  }
+}

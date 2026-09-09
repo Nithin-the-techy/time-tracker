@@ -131,8 +131,8 @@
   }
   .work-layout {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 19rem;
-    gap: 2rem;
+    grid-template-columns: minmax(0, 1fr) clamp(18rem, 20vw, 21rem);
+    gap: 1.5rem;
     align-items: start;
   }
   .work-rail {
@@ -189,6 +189,15 @@
   .work-secondary-section {
     border-top: 1px solid var(--ink-border);
     padding-top: 1rem;
+  }
+  @media (min-width: 768px) and (max-width: 1199px) {
+    .dashboard-sidebar { width: 184px !important; }
+    .dashboard-main { padding-left: 1.5rem !important; padding-right: 1.5rem !important; }
+    .work-layout { grid-template-columns: minmax(0, 1fr) 18rem; gap: 1.5rem; }
+    .work-rail { gap: 1.5rem; }
+  }
+  @media (min-width: 1200px) {
+    .work-layout { gap: 2rem; }
   }
   @media (max-width: 1023px) {
     .work-layout { grid-template-columns: 1fr; }
