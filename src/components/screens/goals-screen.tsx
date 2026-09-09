@@ -156,14 +156,15 @@ function ActionRows({ goal }: { goal: Goal }) {
     catch (error) { toast.error(error instanceof Error ? error.message : 'Could not start Session') }
   }
   function edit(action: GoalAction) {
-    setEditingAction(action); setEditGoalId(action.goalId); setEditTitle(action.title); setEditMinutes(String(action.plannedMinutes)); setEditDueDate(action.dueDate ?? '')
+    setEditingAction(action); setEditGoalId(action.goalId); setEditTitle(action.title); setEditMinutes(String(action.plannedMinutes)); setEditDueDate(action.dueDate ?? (action.status === 'today' ? today : ''))
   }
   async function saveEdit() {
     if (!editingAction || !editGoalId || !editTitle.trim()) return
     const parsedMinutes = Math.round(Number(editMinutes))
     if (!Number.isFinite(parsedMinutes) || parsedMinutes < 1 || parsedMinutes > 720) { toast.error('Minutes must be between 1 and 720'); return }
     const nextStatus = editDueDate ? editDueDate === today ? 'today' : 'backlog' : undefined
-    try { await store.updateGoalAction(editingAction.id, { goalId: editGoalId, title: editTitle.trim(), plannedMinutes: parsedMinutes, dueDate: editDueDate || null, ...(nextStatus ? { status: nextStatus } : {}) }); setEditingAction(null); toast.success('Step updated') }
+    const persistedDueDate = editDueDate === today ? null : editDueDate || null
+    try { await store.updateGoalAction(editingAction.id, { goalId: editGoalId, title: editTitle.trim(), plannedMinutes: parsedMinutes, dueDate: persistedDueDate, ...(nextStatus ? { status: nextStatus } : {}) }); setEditingAction(null); toast.success('Step updated') }
     catch (error) { toast.error(error instanceof Error ? error.message : 'Could not update Step') }
   }
   async function archive(action: GoalAction) {
