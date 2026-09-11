@@ -139,6 +139,10 @@
     gap: 1.5rem;
     margin-bottom: 2rem;
   }
+  .work-screen {
+    width: 100%;
+    max-width: none !important;
+  }
   .work-eyebrow {
     margin-bottom: .45rem;
     color: var(--muted-foreground);
@@ -215,8 +219,9 @@
   @media (min-width: 768px) and (max-width: 1199px) {
     .dashboard-sidebar { width: 184px !important; }
     .dashboard-main { padding-left: 1.5rem !important; padding-right: 1.5rem !important; }
-    .work-layout { grid-template-columns: minmax(0, 1fr) 17rem; gap: 1.25rem; }
+    .work-layout { grid-template-columns: 1fr; gap: 1.25rem; }
     .work-rail { gap: 1rem; }
+    .work-rail { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
   }
   @media (min-width: 1200px) {
     .work-layout { gap: 2rem; }
