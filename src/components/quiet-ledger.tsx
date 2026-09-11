@@ -5,7 +5,7 @@ export function LedgerPanel({ className, ...props }: HTMLAttributes<HTMLDivEleme
   return (
     <div
       className={cn(
-        'rounded-lg border border-border/80 bg-card p-5',
+        'rounded-2xl border border-border/80 bg-card p-6',
         className,
       )}
       {...props}
@@ -17,7 +17,7 @@ export function LedgerRow({ className, ...props }: HTMLAttributes<HTMLDivElement
   return (
     <div
       className={cn(
-        'rounded-md border border-border/70 bg-background/20 p-3',
+        'rounded-xl border border-border/70 bg-background/20 p-4',
         className,
       )}
       {...props}

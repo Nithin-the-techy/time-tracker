@@ -47,11 +47,13 @@
 /* The 6 tokens from spec. Dark mode is the only theme. */
 :root,
 .dark {
-  --radius: 0.5rem;
+  --radius: 0.75rem;
   /* surfaces */
   --ink: oklch(0.14 0.02 250);             /* deep navy background */
   --paper: oklch(0.18 0.012 250);           /* quiet navy surface */
   --paper-raised: oklch(0.205 0.014 65);    /* restrained warm raised surface */
+  --surface-soft: oklch(0.17 0.018 250);
+  --surface-raised: oklch(0.205 0.022 250);
   --ink-border: oklch(1 0 0 / 8%);         /* hairline dividers */
   --ink-border-strong: oklch(1 0 0 / 16%);
 
@@ -59,6 +61,8 @@
   --growth: oklch(0.76 0.12 85);           /* muted gold for truthful progress */
   --depreciation: oklch(0.64 0.18 25);     /* red, reserved for risk and loss */
   --focus-ring: oklch(0.76 0.10 230);      /* visible, calm keyboard focus */
+  --accent-blue: oklch(0.77 0.11 220);
+  --accent-blue-soft: oklch(0.77 0.11 220 / 12%);
 
   /* text */
   --ink-foreground: oklch(0.92 0.01 60);   /* off-white */
@@ -85,6 +89,7 @@
   }
   body {
     @apply bg-background text-foreground;
+    background-image: radial-gradient(circle at 92% -12%, color-mix(in oklch, var(--focus-ring) 7%, transparent), transparent 34rem);
     font-family: var(--font-plex-sans), system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
   }
@@ -114,12 +119,25 @@
     font-feature-settings: "ss01", "ss02";
     font-variant-numeric: tabular-nums;
   }
+  .dashboard-shell {
+    background: linear-gradient(180deg, color-mix(in oklch, var(--ink) 96%, var(--focus-ring) 4%), var(--ink));
+  }
+  .dashboard-sidebar {
+    background: color-mix(in oklch, var(--ink) 92%, var(--paper) 8%);
+    border-color: var(--ink-border);
+  }
+  .dashboard-main {
+    padding-top: 2rem;
+  }
+  .dashboard-main > * {
+    min-width: 0;
+  }
   .work-page-head {
     display: flex;
     align-items: flex-end;
     justify-content: space-between;
     gap: 1.5rem;
-    margin-bottom: 1.75rem;
+    margin-bottom: 2rem;
   }
   .work-eyebrow {
     margin-bottom: .45rem;
@@ -131,36 +149,40 @@
   }
   .work-layout {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) clamp(18rem, 20vw, 21rem);
-    gap: 1.5rem;
+    grid-template-columns: minmax(0, 1fr) minmax(17rem, 19rem);
+    gap: 1.75rem;
     align-items: start;
   }
   .work-rail {
     display: grid;
-    gap: 2rem;
+    gap: 1rem;
     min-width: 0;
   }
   .work-rail > * {
     min-width: 0;
     max-width: 100%;
   }
+  .work-rail > section {
+    border: 1px solid var(--ink-border);
+    border-radius: 1.125rem;
+    background: color-mix(in oklch, var(--paper) 78%, transparent);
+    padding: 1rem;
+  }
   .work-tier1 {
     position: relative;
     border-color: var(--ink-border-strong);
+    background: linear-gradient(145deg, color-mix(in oklch, var(--paper) 96%, var(--focus-ring) 4%), var(--paper));
+    border-radius: 1.25rem;
+    box-shadow: 0 18px 50px color-mix(in oklch, var(--ink) 55%, transparent);
   }
   .work-tier1::before {
-    position: absolute;
-    inset: 0 0 auto;
-    height: 2px;
-    border-radius: .5rem .5rem 0 0;
-    background: var(--growth);
-    content: '';
+    display: none;
   }
   .work-rail-strip, .work-empty-rail {
     border: 1px solid var(--ink-border);
-    border-radius: .5rem;
-    background: transparent;
-    padding: .9rem;
+    border-radius: .875rem;
+    background: var(--surface-soft);
+    padding: .9rem 1rem;
   }
   .work-rail-strip:hover, .work-empty-rail:hover {
     border-color: var(--ink-border-strong);
@@ -169,18 +191,18 @@
   .work-outcome-row {
     display: flex;
     align-items: flex-start;
-    gap: .65rem;
-    padding: .75rem .15rem;
+    gap: .8rem;
+    padding: .8rem .15rem;
   }
   .work-outcome-row:hover .work-outcome-marker { background: var(--growth); }
-  .work-outcome-marker { width: 3px; min-height: 2.35rem; flex-shrink: 0; border-radius: 2px; }
+  .work-outcome-marker { width: 4px; min-height: 2.6rem; flex-shrink: 0; border-radius: 4px; }
   .work-empty-state {
     min-height: 7rem;
     border-top: 1px solid var(--ink-border);
     border-bottom: 1px solid var(--ink-border);
     padding: 1.25rem 0;
   }
-  .work-row { min-height: 4.25rem; }
+  .work-row { min-height: 4.5rem; }
   .work-add-step {
     margin-top: 1rem;
     border-top: 1px solid var(--ink-border);
@@ -193,8 +215,8 @@
   @media (min-width: 768px) and (max-width: 1199px) {
     .dashboard-sidebar { width: 184px !important; }
     .dashboard-main { padding-left: 1.5rem !important; padding-right: 1.5rem !important; }
-    .work-layout { grid-template-columns: minmax(0, 1fr) 18rem; gap: 1.5rem; }
-    .work-rail { gap: 1.5rem; }
+    .work-layout { grid-template-columns: minmax(0, 1fr) 17rem; gap: 1.25rem; }
+    .work-rail { gap: 1rem; }
   }
   @media (min-width: 1200px) {
     .work-layout { gap: 2rem; }
@@ -203,9 +225,41 @@
     .work-layout { grid-template-columns: 1fr; }
     .work-rail { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
   }
+  .progress-screen {
+    max-width: 1280px;
+  }
+  .progress-summary {
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(15rem, .9fr);
+    gap: 1rem;
+  }
+  .progress-summary > div {
+    min-width: 0;
+    border: 1px solid var(--ink-border);
+    border-radius: 1.125rem;
+    background: linear-gradient(145deg, color-mix(in oklch, var(--paper) 92%, var(--focus-ring) 8%), var(--paper));
+    padding: 1.25rem 1.35rem;
+  }
+  .progress-summary > div:last-child {
+    background: linear-gradient(145deg, color-mix(in oklch, var(--paper) 88%, var(--accent-blue) 12%), var(--paper));
+  }
+  .progress-window {
+    border: 1px solid var(--ink-border);
+    border-radius: 1.125rem;
+    background: color-mix(in oklch, var(--paper) 82%, transparent);
+    padding: .9rem 1rem;
+  }
+  [data-slot="card"] {
+    border-color: var(--ink-border);
+    background: linear-gradient(145deg, color-mix(in oklch, var(--paper) 94%, var(--focus-ring) 6%), var(--paper));
+    border-radius: 1.125rem;
+    box-shadow: 0 14px 36px color-mix(in oklch, var(--ink) 35%, transparent);
+  }
   @media (max-width: 640px) {
     .work-page-head { align-items: flex-start; flex-direction: column; }
     .work-rail { grid-template-columns: 1fr; }
+    .progress-summary { grid-template-columns: 1fr; }
+    .dashboard-main { padding-top: 1.25rem; }
   }
   input, select, textarea {
     min-height: 40px;

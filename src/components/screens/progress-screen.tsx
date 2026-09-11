@@ -167,10 +167,10 @@ export function ProgressScreen() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl space-y-7">
-      <h1 className="ledger-page-title">Progress</h1>
+    <div className="progress-screen mx-auto space-y-7">
+      <header className="work-page-head"><div><p className="work-eyebrow">Measured over time</p><h1 className="ledger-page-title">Progress</h1></div></header>
       {/* These summaries remain independent of the chart window. */}
-      <div className="grid gap-6 border-y border-border/70 py-5 md:grid-cols-2 md:gap-10">
+      <div className="progress-summary">
         <div className="min-w-0">
           <p className="text-sm text-muted-foreground">GPP pace</p>
           <div className="mt-1 flex items-baseline gap-3 flex-wrap">
@@ -208,7 +208,7 @@ export function ProgressScreen() {
 
       {/* Unified composition: donut(s) + stacked bars */}
       <section aria-labelledby="chart-window-heading" className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-y border-border/70 py-3"><div><p id="chart-window-heading" className="text-sm font-medium">Chart window</p><p className="mt-1 text-xs text-muted-foreground">{windowName} · {winLabel}</p></div><ModeSwitch value={mode} onChange={setProgressMode} /></div>
+      <div className="progress-window flex flex-wrap items-center justify-between gap-3"><div><p id="chart-window-heading" className="text-sm font-medium">Chart window</p><p className="mt-1 text-xs text-muted-foreground">{windowName} · {winLabel}</p></div><ModeSwitch value={mode} onChange={setProgressMode} /></div>
       {mode === 'dayweek' ? (
         <>
           <div className="grid md:grid-cols-2 gap-3">

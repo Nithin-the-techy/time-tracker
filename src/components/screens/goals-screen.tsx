@@ -33,8 +33,8 @@ export function GoalsScreen() {
     if (activeGoalId && !activeGoal && !loading) closeGoal()
   }, [activeGoal, activeGoalId, closeGoal, loading])
 
-  return <div className="work-screen mx-auto max-w-[1680px] overflow-x-hidden pb-12">
-    <header className="work-page-head"><h1 className="ledger-page-title">Work</h1></header>
+  return <div className="work-screen mx-auto max-w-[1400px] overflow-x-hidden pb-12">
+    <header className="work-page-head"><div><p className="work-eyebrow">Plan and do</p><h1 className="ledger-page-title">Work</h1></div></header>
     <div className="work-layout">
       <main className="min-w-0">{running ? <RunningSession session={running.session} action={running.action} goalTitle={running.goal.title} availableSteps={goals.flatMap((goal) => goal.actions.filter((action) => (action.status === 'today' || action.status === 'in_progress') && action.id !== running.action.id).map((action) => ({ action, goalTitle: goal.title })))} /> : activeGoal ? <GoalWorkbench goal={activeGoal} onBack={closeGoal} /> : <TodayScreen />}</main>
       <aside className="work-rail" aria-label="Work navigation"><SprintPanel /><OutcomeNavigator goals={visibleGoals} departments={departments} sprints={visibleSprints} loading={loading} onOpenGoal={openGoal} /></aside>
